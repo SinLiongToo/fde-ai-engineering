@@ -144,7 +144,9 @@
       });
       html += "</ol>";
     });
-    html += '<ol style="margin-top:.8rem"><li><a href="glossary.html"' + (page === "glossary" ? ' aria-current="page"' : "") +
+    html += '<ol style="margin-top:.8rem"><li><a href="projects.html"' + (page === "projects" ? ' aria-current="page"' : "") +
+      '><span class="num">★</span><span>' + both("作品集專案", "Portfolio projects") + "</span><span></span></a></li>" +
+      '<li><a href="glossary.html"' + (page === "glossary" ? ' aria-current="page"' : "") +
       '><span class="num">Aa</span><span>' + both("詞彙表", "Glossary") + "</span><span></span></a></li></ol>";
     var pct = Math.round(doneCount / CHAPTERS.length * 100);
     html += '<div class="progress">' + both("學習進度", "Progress") + " " + doneCount + " / " + CHAPTERS.length +

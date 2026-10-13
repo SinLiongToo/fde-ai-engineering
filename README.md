@@ -83,6 +83,7 @@ docs/                    網站 / website (static HTML, no build step)
   i1-…i6-*.html          中級篇六章
   01-…09-*.html          進階篇九章
   glossary.html          詞彙表
+  projects.html          作品集專案：六個分級題目、README 範本、檢查表
   assets/site.css        設計系統：顏色變數、深淺色、版面
   assets/site.js         側欄、目錄、語言/主題切換、小測驗、進度
   assets/demos/*.js      互動示範（basics.js 為入門篇）
