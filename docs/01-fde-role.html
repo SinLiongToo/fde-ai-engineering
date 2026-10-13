@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="01-fde-role"
+  data-title-zh="01 FDE 是做什麼的 · AI 工程實戰課"
+  data-title-en="01 What FDEs actually do · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 FDE 是做什麼的 · AI 工程實戰課</title>
+<meta name="description" content="前線部署工程師 (FDE) 的實際工作內容、與其他職位的差別、需要的能力與常見誤解。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="assets/site.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">第 1 章</span><span lang="en">Chapter 1</span></div>
+<h1><span lang="zh-Hant">FDE 是做什麼的</span><span lang="en">What FDEs actually do</span></h1>
+<p class="lede" lang="zh-Hant">FDE 不是「會寫 prompt 的業務」，也不是「被派去客戶那裡的外包」。它是一個要對結果負責的工程角色：在客戶的限制條件下，把系統做到能用，並把學到的東西帶回產品。</p>
+<p class="lede" lang="en">An FDE is neither "a salesperson who writes prompts" nor "a contractor lent to a customer". It is an engineering role that owns outcomes: make the system work within the customer's constraints, and bring what you learn back to the product.</p>
+<div class="meta"><span>⏱ 15 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">讀完這章你能夠</span><span lang="en">After this chapter you can</span></h2>
+  <ul lang="zh-Hant">
+    <li>說明 FDE 的產出是什麼、對誰負責、成功怎麼衡量。</li>
+    <li>分辨 FDE 與產品工程師、解決方案架構師、顧問的差別。</li>
+    <li>列出這個角色最常失敗的幾種方式，並知道怎麼避免。</li>
+  </ul>
+  <ul lang="en">
+    <li>Explain what an FDE produces, who they answer to and how success is measured.</li>
+    <li>Distinguish the role from product engineers, solutions architects and consultants.</li>
+    <li>Name the most common ways the role fails, and how to avoid them.</li>
+  </ul>
+</section>
+
+<h2 id="origin"><span lang="zh-Hant">這個角色從哪裡來</span><span lang="en">Where the role comes from</span></h2>
+<div lang="zh-Hant">
+  <p>「Forward Deployed Engineer」這個職稱最早因 Palantir 而廣為人知：工程師直接進駐客戶單位，和使用者坐在一起，把平台接上客戶的資料與流程。近幾年許多 AI 公司與企業軟體公司也開了 FDE 或性質相近的職缺，原因很實際：<strong>企業導入 LLM 的瓶頸通常不在模型本身</strong>，而在資料散落各處、權限複雜、既有系統難以整合、以及沒有人能定義「怎樣算做對了」。</p>
+  <p>各公司對這個職稱的定義不完全相同。有的偏重寫程式，有的偏重客戶溝通。本課程採用的定義是：<strong>以工程交付為主、直接面對客戶的工程師</strong>。</p>
+</div>
+<div lang="en">
+  <p>The title "Forward Deployed Engineer" became widely known through Palantir, where engineers embedded with customer teams, sat next to users and wired the platform into the customer's data and workflows.
+  In recent years many AI labs and enterprise software companies have opened FDE or similar roles, for a practical reason: <strong>enterprise LLM adoption is rarely blocked by the model itself</strong>. It is blocked by scattered data, complex permissions, legacy systems that resist integration, and nobody being able to define what "correct" means.</p>
+  <p>Companies use the title differently: some lean towards coding, others towards customer communication. This course uses one definition: <strong>a customer-facing engineer whose primary output is shipped engineering work</strong>.</p>
+</div>
+
+<h2 id="work"><span lang="zh-Hant">實際的工作內容</span><span lang="en">What the work looks like</span></h2>
+<p lang="zh-Hant">一個典型的專案週期裡，FDE 大概會做這些事（順序會反覆來回）：</p>
+<p lang="en">Over a typical engagement an FDE does roughly the following, looping back as needed:</p>
+<ol class="steps">
+  <li><strong><span lang="zh-Hant">釐清問題</span><span lang="en">Clarify the problem</span></strong>
+    <span lang="zh-Hant">坐在使用者旁邊看他們現在怎麼做事。客戶說「我們要一個 AI 助理」，你要找出的是「哪個步驟最花時間、出錯代價多高、怎樣算改善」。</span>
+    <span lang="en">Sit with users and watch how they work today. The customer says "we want an AI assistant"; you find out which step costs the most time, what an error costs, and what improvement would look like.</span></li>
+  <li><strong><span lang="zh-Hant">拿到資料與權限</span><span lang="en">Get data and access</span></strong>
+    <span lang="zh-Hant">這常常是最慢的一步：資安審查、帳號申請、找出資料真正的擁有者。越早開始越好。</span>
+    <span lang="en">Often the slowest step: security review, account requests, finding who actually owns the data. Start it on day one.</span></li>
+  <li><strong><span lang="zh-Hant">做出能用的第一版</span><span lang="en">Build a usable first version</span></strong>
+    <span lang="zh-Hant">用真實資料、真實使用者，盡快拿到回饋。不是投影片，是可以操作的東西。</span>
+    <span lang="en">Use real data and real users to get feedback fast. Not slides: something people can use.</span></li>
+  <li><strong><span lang="zh-Hant">讓它可靠</span><span lang="en">Make it reliable</span></strong>
+    <span lang="zh-Hant">加上評測、監控、權限控管、錯誤處理。這一步決定系統能不能活過第一個月。</span>
+    <span lang="en">Add evals, monitoring, access control and error handling. This decides whether the system survives its first month.</span></li>
+  <li><strong><span lang="zh-Hant">交接，並把經驗帶回去</span><span lang="en">Hand over, and bring lessons back</span></strong>
+    <span lang="zh-Hant">讓客戶的團隊能自己維運；同時把「三個客戶都需要的功能」回報給產品團隊，讓下一次不用再客製。</span>
+    <span lang="en">Make the customer's team able to run it themselves, and report "the feature three customers needed" back to your product team so the next deployment needs less custom work.</span></li>
+</ol>
+
+<div class="callout tip">
+  <span class="label"><span lang="zh-Hant">重點</span><span lang="en">Key point</span></span>
+  <p lang="zh-Hant">FDE 有兩個客戶：外部客戶要的是問題被解決，內部產品團隊要的是現場的真實訊號。只服務其中一邊，這個角色就會失去價值。</p>
+  <p lang="en">An FDE has two customers: the external customer, who wants the problem solved, and the internal product team, who wants real signal from the field. Serve only one of them and the role loses its value.</p>
+</div>
+
+<h2 id="compare"><span lang="zh-Hant">和相近職位的差別</span><span lang="en">How it differs from adjacent roles</span></h2>
+<p lang="zh-Hant">下表是常見的分工方式，實際情況依公司而異。</p>
+<p lang="en">A common division of labour; individual companies vary.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr>
+    <th></th>
+    <th><span lang="zh-Hant">產品工程師</span><span lang="en">Product engineer</span></th>
+    <th><span lang="zh-Hant">解決方案架構師</span><span lang="en">Solutions architect</span></th>
+    <th>FDE</th>
+  </tr></thead>
+  <tbody>
+    <tr>
+      <td><span lang="zh-Hant">主要產出</span><span lang="en">Main output</span></td>
+      <td><span lang="zh-Hant">給所有客戶用的產品功能</span><span lang="en">Product features for all customers</span></td>
+      <td><span lang="zh-Hant">架構建議、PoC、售前技術支援</span><span lang="en">Architecture guidance, PoCs, pre-sales support</span></td>
+      <td><span lang="zh-Hant">在特定客戶環境裡運作的系統</span><span lang="en">A working system in a specific customer environment</span></td>
+    </tr>
+    <tr>
+      <td><span lang="zh-Hant">成功的衡量</span><span lang="en">Measured by</span></td>
+      <td><span lang="zh-Hant">產品指標、品質、交付速度</span><span lang="en">Product metrics, quality, delivery</span></td>
+      <td><span lang="zh-Hant">成交、技術驗證通過</span><span lang="en">Deals closed, technical validation passed</span></td>
+      <td><span lang="zh-Hant">客戶實際使用、業務成果、續約</span><span lang="en">Actual usage, business outcome, renewal</span></td>
+    </tr>
+    <tr>
+      <td><span lang="zh-Hant">程式碼深度</span><span lang="en">Code depth</span></td>
+      <td><span lang="zh-Hant">深，集中在自家系統</span><span lang="en">Deep, in your own codebase</span></td>
+      <td><span lang="zh-Hant">中等，以示範為主</span><span lang="en">Moderate, mostly demos</span></td>
+      <td><span lang="zh-Hant">廣，要整合客戶的既有系統</span><span lang="en">Broad, integrating the customer's systems</span></td>
+    </tr>
+    <tr>
+      <td><span lang="zh-Hant">時間尺度</span><span lang="en">Time horizon</span></td>
+      <td><span lang="zh-Hant">長期維護</span><span lang="en">Long-term ownership</span></td>
+      <td><span lang="zh-Hant">數週（銷售週期）</span><span lang="en">Weeks (sales cycle)</span></td>
+      <td><span lang="zh-Hant">數週到數月，然後交接</span><span lang="en">Weeks to months, then handover</span></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p lang="zh-Hant">和<strong>顧問</strong>最大的差別是：顧問的產出常是建議與文件，FDE 的產出是在跑的程式，而且背後有一個會持續演進的產品。</p>
+<p lang="en">The biggest difference from a <strong>consultant</strong>: a consultant's output is often recommendations and documents, while an FDE's output is running code, backed by a product that keeps evolving.</p>
+
+<h2 id="skills"><span lang="zh-Hant">需要的能力</span><span lang="en">Skills the role needs</span></h2>
+<div class="grid">
+  <div class="card"><h3><span lang="zh-Hant">正式環境工程</span><span lang="en">Production engineering</span></h3>
+    <p lang="zh-Hant">API、資料庫、身分驗證、部署、監控。客戶環境什麼都可能有，你得在陌生的技術堆疊裡快速上手。</p>
+    <p lang="en">APIs, databases, auth, deployment, monitoring. Customer environments can contain anything, so you must get productive in unfamiliar stacks quickly.</p></div>
+  <div class="card"><h3><span lang="zh-Hant">LLM 應用工程</span><span lang="en">Applied LLM engineering</span></h3>
+    <p lang="zh-Hant">結構化輸出、檢索、工具呼叫、評測。重點不是調參數，而是知道模型在哪裡會出錯、怎麼用工程把錯誤擋住。</p>
+    <p lang="en">Structured output, retrieval, tool use, evaluation. Not tuning knobs, but knowing where models fail and how to contain the failures with engineering.</p></div>
+  <div class="card"><h3><span lang="zh-Hant">釐清需求</span><span lang="en">Discovery</span></h3>
+    <p lang="zh-Hant">問對問題、把模糊的期待變成可以量測的條件，並且讓非技術的人聽懂取捨。</p>
+    <p lang="en">Asking the right questions, turning vague expectations into measurable criteria, and explaining trade-offs to non-technical people.</p></div>
+  <div class="card"><h3><span lang="zh-Hant">判斷力</span><span lang="en">Judgment</span></h3>
+    <p lang="zh-Hant">決定什麼不做。範圍控制、說「這個用規則就好，不需要 AI」，以及知道什麼時候該升級問題。</p>
+    <p lang="en">Deciding what not to build. Controlling scope, saying "a rule handles this, no AI needed", and knowing when to escalate.</p></div>
+</div>
+<p lang="zh-Hant">這四項沒有固定比例。不同專案的比重差很多，重要的是每一項都不能是零。</p>
+<p lang="en">There is no fixed ratio between these; projects vary a lot. What matters is that none of them is zero.</p>
+
+<h2 id="pitfalls"><span lang="zh-Hant">常見的失敗方式</span><span lang="en">Common ways the role fails</span></h2>
+<div class="callout bad">
+  <span class="label"><span lang="zh-Hant">一次性的客製程式</span><span lang="en">One-off custom code</span></span>
+  <p lang="zh-Hant">為了趕上線，在客戶那裡寫了一套和產品分岔的程式。半年後沒人敢改，產品升級也接不上。對策：客製部分用設定、外掛或明確的擴充點處理；同樣的需求出現兩次，就推回產品。</p>
+  <p lang="en">To hit a deadline you write code that forks from the product. Six months later nobody dares touch it and product upgrades can't land. Instead: express customisation as configuration, plugins or explicit extension points, and push repeated requests back into the product.</p>
+</div>
+<div class="callout bad">
+  <span class="label"><span lang="zh-Hant">只做 demo</span><span lang="en">Demo-ware</span></span>
+  <p lang="zh-Hant">在挑過的十個問題上表現很好，上線後遇到真實輸入就失靈。對策：第一週就開始蒐集真實的問題當測試集（第 7 章）。</p>
+  <p lang="en">Great on ten hand-picked questions, falls apart on real input. Instead: start collecting real questions as a test set in week one (chapter 7).</p>
+</div>
+<div class="callout bad">
+  <span class="label"><span lang="zh-Hant">成功條件沒講清楚</span><span lang="en">Undefined success</span></span>
+  <p lang="zh-Hant">專案做了三個月，客戶仍說「感覺還不夠好」。對策：開工前和客戶一起寫下可以量測的成功條件，並約定誰來判定（第 2 章）。</p>
+  <p lang="en">Three months in, the customer still says it "doesn't feel good enough". Instead: before building, write down measurable success criteria with the customer and agree who judges them (chapter 2).</p>
+</div>
+<div class="callout bad">
+  <span class="label"><span lang="zh-Hant">英雄式維運</span><span lang="en">Hero operations</span></span>
+  <p lang="zh-Hant">系統只有你看得懂，每次出事都要找你。對策：從第一天就寫 runbook、加監控，並讓客戶的工程師一起改程式。</p>
+  <p lang="en">Only you understand the system, so every incident pages you. Instead: write runbooks and add monitoring from day one, and have the customer's engineers change code with you.</p>
+</div>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">1. 客戶說：「我們要一個什麼都知道的 AI 助理。」FDE 最好的第一步是？</span><span lang="en">1. The customer says: "We want an AI assistant that knows everything." What is the best first step?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">立刻把所有文件放進向量資料庫，先做 demo。</span><span lang="en">Load every document into a vector DB and build a demo.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">請客戶寫一份完整的需求規格書再開始。</span><span lang="en">Ask the customer for a complete requirements document first.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">觀察使用者現在的工作流程，找出最花時間、錯誤代價最高的步驟。</span><span lang="en">Observe how users work today and find the step that costs the most time or has the most expensive errors.</span></span></label>
+    <div class="explain" lang="zh-Hant">「什麼都知道」不是可以驗收的目標。先找出具體的痛點，才能定義範圍與成功條件。等客戶寫規格通常會等很久，而且寫出來的常常不是真正的問題。</div>
+    <div class="explain" lang="en">"Knows everything" can't be accepted or rejected. Find a concrete pain point first so you can define scope and success. Waiting for a spec is slow, and the spec often describes the wrong problem.</div>
+  </fieldset>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">2. 三個不同客戶都要求同一個匯出功能，你在其中一個客戶那裡已經寫好了。下一步？</span><span lang="en">2. Three customers ask for the same export feature, and you already built it at one of them. Next step?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">把程式複製到另外兩個客戶的環境。</span><span lang="en">Copy the code into the other two customers' environments.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">整理需求與實作經驗，推回產品團隊做成正式功能。</span><span lang="en">Write up the requirement and what you learned, and push it to the product team as a real feature.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">不用處理，這是各客戶的客製需求。</span><span lang="en">Nothing; it's each customer's custom need.</span></span></label>
+    <div class="explain" lang="zh-Hant">重複出現的需求是產品訊號。複製程式會產生三份需要分別維護的分岔版本。</div>
+    <div class="explain" lang="en">A repeated request is a product signal. Copying the code creates three forks that must each be maintained.</div>
+  </fieldset>
+  <fieldset data-answer="a">
+    <legend><span lang="zh-Hant">3. 下列哪一項最能代表 FDE 的成功？</span><span lang="en">3. Which best represents FDE success?</span></legend>
+    <label><input type="radio" name="q3" value="a"><span><span lang="zh-Hant">交接後，客戶團隊自己維運系統，而且使用量持續成長。</span><span lang="en">After handover, the customer's team runs the system and usage keeps growing.</span></span></label>
+    <label><input type="radio" name="q3" value="b"><span><span lang="zh-Hant">demo 讓客戶高層印象深刻。</span><span lang="en">The demo impressed the customer's executives.</span></span></label>
+    <label><input type="radio" name="q3" value="c"><span><span lang="zh-Hant">寫了很多程式碼。</span><span lang="en">You wrote a lot of code.</span></span></label>
+    <div class="explain" lang="zh-Hant">demo 只是過程。真正的結果是系統在沒有你的情況下持續被使用、持續產生價值。</div>
+    <div class="explain" lang="en">A demo is a step along the way. The outcome is a system that keeps being used and keeps producing value without you.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

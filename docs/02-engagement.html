@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="02-engagement"
+  data-title-zh="02 從需求到上線的交付流程 · AI 工程實戰課"
+  data-title-en="02 The engagement lifecycle · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02 從需求到上線的交付流程 · AI 工程實戰課</title>
+<meta name="description" content="FDE 專案的五個階段：釐清問題、資料與權限、原型、強化、上線與交接，以及每個階段要交出的東西。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">第 2 章</span><span lang="en">Chapter 2</span></div>
+<h1><span lang="zh-Hant">從需求到上線的交付流程</span><span lang="en">The engagement lifecycle</span></h1>
+<p class="lede" lang="zh-Hant">大多數 AI 專案失敗不是因為技術做不到，而是因為一開始沒講清楚要解決什麼、怎樣算成功。這一章談的是在寫程式之前與之後，必須做好的那些事。</p>
+<p class="lede" lang="en">Most AI projects fail not because the technology can't do it, but because nobody agreed up front on what problem is being solved and what success means. This chapter covers what has to happen before and after the code.</p>
+<div class="meta"><span>⏱ 20 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">讀完這章你能夠</span><span lang="en">After this chapter you can</span></h2>
+  <ul lang="zh-Hant">
+    <li>主持一場需求探索，問出範圍、錯誤代價與決策者。</li>
+    <li>和客戶一起寫下可量測、有人負責判定的成功條件。</li>
+    <li>說出每個階段應該交出什麼，以及最常卡住的地方。</li>
+  </ul>
+  <ul lang="en">
+    <li>Run a discovery session that surfaces scope, cost of errors and decision makers.</li>
+    <li>Write measurable success criteria with the customer, each with a named owner.</li>
+    <li>State what each phase must deliver and where projects usually stall.</li>
+  </ul>
+</section>
+
+<h2 id="overview"><span lang="zh-Hant">五個階段</span><span lang="en">Five phases</span></h2>
+<p lang="zh-Hant">下圖是本課程使用的階段劃分。實際上各階段會重疊、會來回，時間長短也依專案差異很大，不要把它當成固定的天數表。</p>
+<p lang="en">The diagram shows the phases this course uses. In practice they overlap and loop, and durations vary widely between projects, so don't treat it as a fixed schedule.</p>
+
+<div class="diagram" role="img" aria-label="Five phases: discovery, data and access, prototype, hardening, launch and handover, with a feedback loop">
+  <svg viewBox="0 0 740 190" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+    <g>
+      <rect class="box accent" x="10" y="40" width="125" height="64" rx="9"/>
+      <text x="72" y="68" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">釐清問題</tspan><tspan lang="en">Discovery</tspan></text>
+      <text x="72" y="88" text-anchor="middle" class="muted"><tspan lang="zh-Hant">成功條件</tspan><tspan lang="en">success criteria</tspan></text>
+      <rect class="box" x="160" y="40" width="125" height="64" rx="9"/>
+      <text x="222" y="68" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">資料與權限</tspan><tspan lang="en">Data &amp; access</tspan></text>
+      <text x="222" y="88" text-anchor="middle" class="muted"><tspan lang="zh-Hant">測試集雛形</tspan><tspan lang="en">seed test set</tspan></text>
+      <rect class="box" x="310" y="40" width="125" height="64" rx="9"/>
+      <text x="372" y="68" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">原型</tspan><tspan lang="en">Prototype</tspan></text>
+      <text x="372" y="88" text-anchor="middle" class="muted"><tspan lang="zh-Hant">端到端、真資料</tspan><tspan lang="en">end-to-end, real data</tspan></text>
+      <rect class="box" x="460" y="40" width="125" height="64" rx="9"/>
+      <text x="522" y="68" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">強化</tspan><tspan lang="en">Hardening</tspan></text>
+      <text x="522" y="88" text-anchor="middle" class="muted"><tspan lang="zh-Hant">評測、監控、安全</tspan><tspan lang="en">evals, monitoring, security</tspan></text>
+      <rect class="box accent" x="610" y="40" width="125" height="64" rx="9"/>
+      <text x="672" y="68" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">上線與交接</tspan><tspan lang="en">Launch &amp; handover</tspan></text>
+      <text x="672" y="88" text-anchor="middle" class="muted"><tspan lang="zh-Hant">runbook、驗收</tspan><tspan lang="en">runbook, sign-off</tspan></text>
+    </g>
+    <path class="edge" d="M135 72 L158 72" marker-end="url(#ah2)"/>
+    <path class="edge" d="M285 72 L308 72" marker-end="url(#ah2)"/>
+    <path class="edge" d="M435 72 L458 72" marker-end="url(#ah2)"/>
+    <path class="edge" d="M585 72 L608 72" marker-end="url(#ah2)"/>
+    <path class="edge dashed" d="M522 104 C 522 160, 72 160, 72 106" marker-end="url(#ah2)"/>
+    <text x="297" y="176" text-anchor="middle" class="muted"><tspan lang="zh-Hant">使用者回饋與失敗案例會改變範圍與成功條件</tspan><tspan lang="en">user feedback and failures reshape scope and criteria</tspan></text>
+  </svg>
+</div>
+
+<h2 id="discovery"><span lang="zh-Hant">階段 1：釐清問題</span><span lang="en">Phase 1: Discovery</span></h2>
+<p lang="zh-Hant">目標是把「我們想用 AI 做 X」變成一段可以驗收的問題描述。最有效的方法是<strong>看使用者實際操作</strong>，而不是只聽主管描述。</p>
+<p lang="en">The goal is to turn "we want to use AI for X" into a problem statement that can be accepted or rejected. The most effective method is to <strong>watch users do the work</strong>, not just listen to their manager describe it.</p>
+
+<h3><span lang="zh-Hant">一定要問的問題</span><span lang="en">Questions to always ask</span></h3>
+<div class="table-wrap">
+<table class="plain">
+  <thead><tr><th><span lang="zh-Hant">問題</span><span lang="en">Question</span></th><th><span lang="zh-Hant">為什麼重要</span><span lang="en">Why it matters</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">現在誰在做這件事？每天做多少次？每次花多久？</span><span lang="en">Who does this today? How often? How long each time?</span></td>
+        <td><span lang="zh-Hant">決定價值上限，也提供改善前的基準。</span><span lang="en">Sets the ceiling on value and gives you a before-baseline.</span></td></tr>
+    <tr><td><span lang="zh-Hant">做錯一次的代價是什麼？誰會發現？</span><span lang="en">What does one mistake cost? Who notices?</span></td>
+        <td><span lang="zh-Hant">決定要多少人工審核，以及能不能全自動。</span><span lang="en">Decides how much human review is needed and whether full automation is possible.</span></td></tr>
+    <tr><td><span lang="zh-Hant">需要的資料在哪裡？誰能核准存取？</span><span lang="en">Where is the data? Who can approve access?</span></td>
+        <td><span lang="zh-Hant">資料存取常是時程上最長的一段。</span><span lang="en">Data access is often the longest item on the schedule.</span></td></tr>
+    <tr><td><span lang="zh-Hant">誰決定上線？誰會被這個系統影響？</span><span lang="en">Who decides go-live? Who is affected by the system?</span></td>
+        <td><span lang="zh-Hant">找出真正的決策者與可能的反對者。</span><span lang="en">Finds the real decision maker and potential blockers.</span></td></tr>
+    <tr><td><span lang="zh-Hant">有哪些法規、資安或資料留存的限制？</span><span lang="en">What regulatory, security or retention constraints apply?</span></td>
+        <td><span lang="zh-Hant">可能直接決定能用哪個模型、部署在哪裡。</span><span lang="en">May dictate which models you can use and where they run.</span></td></tr>
+    <tr><td><span lang="zh-Hant">之前試過什麼？為什麼沒成功？</span><span lang="en">What has been tried before? Why didn't it work?</span></td>
+        <td><span lang="zh-Hant">避免重蹈覆轍，也揭露組織內部的期待。</span><span lang="en">Avoids repeating failures and reveals internal expectations.</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3><span lang="zh-Hant">先確認：這真的需要 LLM 嗎？</span><span lang="en">First check: does this need an LLM at all?</span></h3>
+<p lang="zh-Hant">如果輸入格式固定、規則明確，一般的程式或規則引擎更便宜、更快、更好測試。如果是找資料，好的搜尋可能就夠了。LLM 適合的是<strong>輸入是自然語言、變化大，而且可以容忍並偵測錯誤</strong>的工作。能說出「這部分不需要 AI」，會讓客戶更信任你其他的建議。</p>
+<p lang="en">If inputs have a fixed format and clear rules, ordinary code or a rules engine is cheaper, faster and easier to test. If the job is finding information, good search may be enough. LLMs fit work where <strong>inputs are natural language, highly variable, and errors can be tolerated and detected</strong>. Being able to say "this part doesn't need AI" makes the customer trust your other recommendations more.</p>
+
+<h3><span lang="zh-Hant">交付物：成功條件</span><span lang="en">Deliverable: success criteria</span></h3>
+<p lang="zh-Hant">每一條都要有：量什麼、怎麼量、門檻、誰判定。下表是<strong>範例</strong>，數字要和你的客戶一起定。</p>
+<p lang="en">Each criterion needs: what is measured, how, the threshold, and who judges it. The table is an <strong>example</strong>; agree the numbers with your customer.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr>
+    <th><span lang="zh-Hant">條件</span><span lang="en">Criterion</span></th>
+    <th><span lang="zh-Hant">量測方式</span><span lang="en">Measured by</span></th>
+    <th><span lang="zh-Hant">門檻（範例）</span><span lang="en">Threshold (example)</span></th>
+    <th><span lang="zh-Hant">判定者</span><span lang="en">Owner</span></th>
+  </tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">答案正確</span><span lang="en">Answer correctness</span></td>
+      <td><span lang="zh-Hant">200 題真實問題，由兩位資深客服評分</span><span lang="en">200 real questions graded by two senior agents</span></td>
+      <td>≥ 85%</td><td><span lang="zh-Hant">客服主管</span><span lang="en">Support lead</span></td></tr>
+    <tr><td><span lang="zh-Hant">不亂答</span><span lang="en">No fabrication</span></td>
+      <td><span lang="zh-Hant">答案中沒有出處支持的陳述比例</span><span lang="en">Share of answers containing unsupported claims</span></td>
+      <td>≤ 2%</td><td><span lang="zh-Hant">客服主管</span><span lang="en">Support lead</span></td></tr>
+    <tr><td><span lang="zh-Hant">權限</span><span lang="en">Permissions</span></td>
+      <td><span lang="zh-Hant">權限測試案例，回傳無權限文件的次數</span><span lang="en">Permission test cases returning unauthorized documents</span></td>
+      <td>0</td><td><span lang="zh-Hant">資安</span><span lang="en">Security</span></td></tr>
+    <tr><td><span lang="zh-Hant">回應時間</span><span lang="en">Latency</span></td>
+      <td><span lang="zh-Hant">正式環境 P95</span><span lang="en">Production P95</span></td>
+      <td>≤ 8 s</td><td><span lang="zh-Hant">IT 維運</span><span lang="en">IT operations</span></td></tr>
+    <tr><td><span lang="zh-Hant">業務成果</span><span lang="en">Business outcome</span></td>
+      <td><span lang="zh-Hant">每張工單平均處理時間</span><span lang="en">Average handling time per ticket</span></td>
+      <td><span lang="zh-Hant">比導入前減少 20%</span><span lang="en">20% lower than before</span></td><td><span lang="zh-Hant">營運主管</span><span lang="en">Operations head</span></td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout tip">
+  <span class="label"><span lang="zh-Hant">技巧</span><span lang="en">Tip</span></span>
+  <p lang="zh-Hant">把「不能出現的錯誤」和「希望變好的指標」分開寫。權限外洩、對外承諾錯誤價格這類錯誤是零容忍，應該用程式擋，而不是用平均分數衡量。</p>
+  <p lang="en">Separate "errors that must never happen" from "metrics we want to improve". Leaking restricted data or quoting wrong prices externally are zero-tolerance; block them in code rather than averaging them into a score.</p>
+</div>
+
+<h2 id="data"><span lang="zh-Hant">階段 2：資料與權限</span><span lang="en">Phase 2: Data and access</span></h2>
+<ul lang="zh-Hant">
+  <li><strong>第一天就送出存取申請。</strong>帳號、VPN、資料庫唯讀帳號、模型 API 的使用核准，都可能要等好幾週。</li>
+  <li><strong>做一份資料清單：</strong>來源、格式、更新頻率、擁有者、誰能看。最後一欄會直接變成檢索的權限過濾條件（第 5 章）。</li>
+  <li><strong>開始蒐集真實問題。</strong>從工單、信件、聊天紀錄中挑出 50 到 100 題，請業務專家寫下正確答案。這就是測試集的雛形（第 7 章）。</li>
+  <li><strong>確認個資處理方式：</strong>哪些欄位要遮蔽、資料能不能送到外部 API、紀錄要保留多久。</li>
+</ul>
+<ul lang="en">
+  <li><strong>File access requests on day one.</strong> Accounts, VPN, read-only DB users and approval to use a model API can each take weeks.</li>
+  <li><strong>Build a data inventory:</strong> source, format, update frequency, owner, who may see it. That last column becomes your retrieval permission filter (chapter 5).</li>
+  <li><strong>Start collecting real questions.</strong> Pull 50–100 from tickets, email or chat logs and have domain experts write the correct answers. That is your seed test set (chapter 7).</li>
+  <li><strong>Settle PII handling:</strong> which fields to mask, whether data may go to an external API, how long logs are kept.</li>
+</ul>
+
+<h2 id="prototype"><span lang="zh-Hant">階段 3：原型</span><span lang="en">Phase 3: Prototype</span></h2>
+<p lang="zh-Hant">做一條<strong>從輸入到輸出完整打通的細線</strong>，而不是把某一層做到完美。用真實資料、交給真實使用者，觀察他們卡在哪裡。這個階段 coding agent 可以大幅加速（第 3 章），但要記得原型的目的是學習，不是交付。</p>
+<p lang="en">Build a <strong>thin slice that runs end to end</strong>, rather than perfecting one layer. Use real data, hand it to real users and watch where they get stuck. Coding agents speed this phase up considerably (chapter 3), but remember the prototype exists to learn, not to ship.</p>
+<div class="callout warn">
+  <span class="label"><span lang="zh-Hant">注意</span><span lang="en">Watch out</span></span>
+  <p lang="zh-Hant">原型 demo 成功後，客戶常會問「下週可以上線嗎？」。事先講清楚原型缺了什麼：評測、監控、權限、錯誤處理。把第 4 階段的工作列成清單給對方看。</p>
+  <p lang="en">After a successful demo, customers often ask "can we go live next week?". Say up front what the prototype lacks: evals, monitoring, permissions, error handling. Show them the phase-4 list.</p>
+</div>
+
+<h2 id="harden"><span lang="zh-Hant">階段 4：強化</span><span lang="en">Phase 4: Hardening</span></h2>
+<p lang="zh-Hant">這是把原型變成正式系統的階段，也是第 4 到 8 章的主要內容：</p>
+<p lang="en">This turns the prototype into a production system, and is what chapters 4–8 cover:</p>
+<ul lang="zh-Hant">
+  <li>模型輸出經過 schema 與業務規則驗證（第 4 章）。</li>
+  <li>檢索有權限過濾，並量過 recall（第 5 章）。</li>
+  <li>會改資料的操作需要核准，並留下紀錄（第 6 章）。</li>
+  <li>測試集在每次改動時自動執行，有退步就擋下（第 7 章）。</li>
+  <li>有追蹤、告警、成本監控與降級方案（第 8 章）。</li>
+</ul>
+<ul lang="en">
+  <li>Model output passes schema and business-rule validation (chapter 4).</li>
+  <li>Retrieval filters by permission and has measured recall (chapter 5).</li>
+  <li>Data-changing actions need approval and are logged (chapter 6).</li>
+  <li>The test set runs on every change and blocks regressions (chapter 7).</li>
+  <li>Tracing, alerting, cost monitoring and a degraded mode exist (chapter 8).</li>
+</ul>
+
+<h2 id="launch"><span lang="zh-Hant">階段 5：上線與交接</span><span lang="en">Phase 5: Launch and handover</span></h2>
+<ul lang="zh-Hant">
+  <li><strong>分階段上線：</strong>先讓一小群使用者用，或先「只建議、不執行」，確認指標正常再擴大。</li>
+  <li><strong>寫 runbook：</strong>常見告警代表什麼、怎麼查、怎麼回滾、要找誰。</li>
+  <li><strong>明確的擁有者：</strong>誰負責模型升級？誰維護測試集？誰付 API 費用？</li>
+  <li><strong>回頭對照成功條件：</strong>用第 1 階段寫下的條件做驗收，而不是用感覺。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Roll out in stages:</strong> start with a small group, or in "suggest, don't act" mode, and widen once metrics hold.</li>
+  <li><strong>Write a runbook:</strong> what each alert means, how to investigate, how to roll back, whom to call.</li>
+  <li><strong>Name owners:</strong> who handles model upgrades, who maintains the test set, who pays for the API.</li>
+  <li><strong>Review against the success criteria</strong> written in phase 1, not against impressions.</li>
+</ul>
+
+<h2 id="adr"><span lang="zh-Hant">範本：架構決策紀錄</span><span lang="en">Template: architecture decision record</span></h2>
+<p lang="zh-Hant">重要的技術選擇寫成一頁 ADR。半年後有人問「為什麼不用向量資料庫？」時，你（或接手的人）會感謝現在的自己。</p>
+<p lang="en">Write important technical choices as one-page ADRs. Six months from now, when someone asks "why didn't we use a vector database?", you or your successor will be glad you did.</p>
+<figure class="code"><figcaption><span>docs/adr/0003-retrieval-store.md</span></figcaption>
+<pre><code class="language-markdown"># ADR 0003: Use PostgreSQL + pgvector for retrieval
+
+Status: accepted (2026-03-14)
+
+## Context
+- ~40k documents, ~200k chunks; growth &lt; 10%/year.
+- Customer already runs PostgreSQL 16 with backups, monitoring and an on-call team.
+- Queries often contain exact part numbers (e.g. "PR-9821-X").
+- Documents carry per-department access rules.
+
+## Decision
+Store chunks, embeddings and a tsvector column in the existing PostgreSQL cluster.
+Run vector and full-text search in one query and fuse with RRF (k=60).
+Apply access rules in the SQL WHERE clause.
+
+## Consequences
++ No new system for the customer to operate; access rules live next to the data.
++ Exact-ID queries handled by full-text search.
+- Index build time grows with data; revisit if chunks exceed ~5M.
+- Re-embedding after a model change needs a backfill job (see runbook §4).
+
+## Alternatives considered
+- Managed vector DB: extra vendor review, duplicated access rules.
+- Vector-only search: failed 9 of 20 exact-ID test queries in the spike.</code></pre>
+</figure>
+
+<h2 id="risks"><span lang="zh-Hant">常見風險與早期訊號</span><span lang="en">Common risks and early signals</span></h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">風險</span><span lang="en">Risk</span></th><th><span lang="zh-Hant">早期訊號</span><span lang="en">Early signal</span></th><th><span lang="zh-Hant">對策</span><span lang="en">Mitigation</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">資料拿不到</span><span lang="en">No data access</span></td>
+      <td><span lang="zh-Hant">第二週還在用假資料</span><span lang="en">Still on fake data in week two</span></td>
+      <td><span lang="zh-Hant">升級到客戶的專案負責人；先用匿名化樣本推進</span><span lang="en">Escalate to the customer's sponsor; proceed with an anonymised sample</span></td></tr>
+    <tr><td><span lang="zh-Hant">範圍蔓延</span><span lang="en">Scope creep</span></td>
+      <td><span lang="zh-Hant">每次會議都多一個「順便」</span><span lang="en">Every meeting adds a "while you're at it"</span></td>
+      <td><span lang="zh-Hant">新需求放進待辦清單，對照成功條件決定優先順序</span><span lang="en">Put new asks on a backlog and prioritise against the success criteria</span></td></tr>
+    <tr><td><span lang="zh-Hant">沒人在用</span><span lang="en">Nobody uses it</span></td>
+      <td><span lang="zh-Hant">原型上線兩週，使用次數個位數</span><span lang="en">Single-digit usage two weeks after the prototype ships</span></td>
+      <td><span lang="zh-Hant">回到現場觀察；問題可能是流程而不是模型</span><span lang="en">Go back and observe; the problem may be workflow, not the model</span></td></tr>
+    <tr><td><span lang="zh-Hant">驗收標準變動</span><span lang="en">Moving goalposts</span></td>
+      <td><span lang="zh-Hant">「感覺還不夠好」</span><span lang="en">"It doesn't feel good enough yet"</span></td>
+      <td><span lang="zh-Hant">拿出書面成功條件與測試集結果討論</span><span lang="en">Discuss using the written criteria and test-set results</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">1. 哪一條是寫得好的成功條件？</span><span lang="en">1. Which is a well-written success criterion?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">「AI 的回答要讓使用者滿意。」</span><span lang="en">"Users should be satisfied with the AI's answers."</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">「在 200 題真實問題上，由兩位資深客服評為正確的比例 ≥ 85%，由客服主管判定。」</span><span lang="en">"On 200 real questions, ≥ 85% graded correct by two senior agents; signed off by the support lead."</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">「準確率達到業界頂尖水準。」</span><span lang="en">"Accuracy at industry-leading levels."</span></span></label>
+    <div class="explain" lang="zh-Hant">好的條件說清楚量什麼、怎麼量、門檻多少、誰判定。另外兩個選項無法驗收。</div>
+    <div class="explain" lang="en">A good criterion states what, how, the threshold and who decides. The other two can't be accepted or rejected.</div>
+  </fieldset>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">2. 專案第一週，最該優先啟動的是？</span><span lang="en">2. In week one, what should you start first?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">選定向量資料庫與 embedding 模型。</span><span lang="en">Choose a vector database and embedding model.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">設計漂亮的 UI。</span><span lang="en">Design a polished UI.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">資料與系統的存取申請，以及蒐集真實問題。</span><span lang="en">Data and system access requests, and collecting real questions.</span></span></label>
+    <div class="explain" lang="zh-Hant">存取申請等待時間長，越早送越好；真實問題是之後評測與設計的基礎。技術選型可以等你看過資料再決定。</div>
+    <div class="explain" lang="en">Access requests have long lead times, so file them early; real questions underpin evaluation and design. Technology choices can wait until you've seen the data.</div>
+  </fieldset>
+  <fieldset data-answer="a">
+    <legend><span lang="zh-Hant">3. 原型 demo 很成功，客戶要求下週上線。你應該？</span><span lang="en">3. The demo went well and the customer wants to go live next week. You should:</span></legend>
+    <label><input type="radio" name="q3" value="a"><span><span lang="zh-Hant">列出原型缺少的項目（評測、監控、權限、錯誤處理），提出分階段上線計畫。</span><span lang="en">List what the prototype lacks (evals, monitoring, permissions, error handling) and propose a staged rollout.</span></span></label>
+    <label><input type="radio" name="q3" value="b"><span><span lang="zh-Hant">答應，之後再補。</span><span lang="en">Agree and fix things later.</span></span></label>
+    <label><input type="radio" name="q3" value="c"><span><span lang="zh-Hant">拒絕，堅持照原計畫的時程。</span><span lang="en">Refuse and insist on the original schedule.</span></span></label>
+    <div class="explain" lang="zh-Hant">直接答應會讓沒有防護的系統面對真實使用者；直接拒絕則浪費了客戶的熱度。分階段上線（例如先開給 10 位使用者、只給建議）兩者兼顧。</div>
+    <div class="explain" lang="en">Agreeing exposes an unprotected system to real users; refusing wastes the customer's momentum. A staged rollout (say 10 users, suggestion-only) serves both.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

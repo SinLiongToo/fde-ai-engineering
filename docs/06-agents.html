@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="06-agents"
+  data-title-zh="06 Agent、工具與人工審核 · AI 工程實戰課"
+  data-title-en="06 Agents, tools and approvals · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06 Agent、工具與人工審核 · AI 工程實戰課</title>
+<meta name="description" content="什麼時候用 workflow、什麼時候用 agent；工具設計、狀態與 checkpoint、中斷與人工核准、最小權限、預算，以及 MCP。附逐步執行的瀏覽器示範。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/demos/agent.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">第 6 章</span><span lang="en">Chapter 6</span></div>
+<h1><span lang="zh-Hant">Agent、工具與人工審核</span><span lang="en">Agents, tools and approvals</span></h1>
+<p class="lede" lang="zh-Hant">讓模型呼叫工具，等於讓一個會犯錯、可能被操弄的使用者操作你的系統。這一章談怎麼設計工具、保存狀態，以及在對的地方放上人工審核與權限限制。</p>
+<p class="lede" lang="en">Letting a model call tools means letting a fallible, manipulable user operate your systems. This chapter covers designing tools, persisting state, and putting human review and permission limits in the right places.</p>
+<div class="meta"><span>⏱ 35 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>labs/core/agent.py</code> · <code>labs/mcp_sre/</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">讀完這章你能夠</span><span lang="en">After this chapter you can</span></h2>
+  <ul lang="zh-Hant">
+    <li>判斷一個任務該用固定的 workflow 還是自主的 agent。</li>
+    <li>設計範圍明確、回傳錯誤、可安全重試的工具。</li>
+    <li>實作 checkpoint、中斷與恢復，讓 agent 能等人核准。</li>
+    <li>把風險標在工具上，並用資料庫權限而不是關鍵字比對來保護資料。</li>
+  </ul>
+  <ul lang="en">
+    <li>Decide whether a task needs a fixed workflow or an autonomous agent.</li>
+    <li>Design tools that are narrow, return errors, and are safe to retry.</li>
+    <li>Implement checkpoints and interrupt/resume so an agent can wait for approval.</li>
+    <li>Declare risk on tools and protect data with database permissions, not keyword matching.</li>
+  </ul>
+</section>
+
+<h2 id="workflow"><span lang="zh-Hant">Workflow 還是 agent？</span><span lang="en">Workflow or agent?</span></h2>
+<p lang="zh-Hant">Anthropic 在〈Building effective agents〉一文中做了很實用的區分：<strong>workflow</strong> 是由程式決定步驟、在固定的位置呼叫 LLM；<strong>agent</strong> 則由模型自己決定下一步要做什麼、用哪個工具、何時結束。agent 比較彈性，但也比較貴、比較慢、比較難預測與除錯。</p>
+<p lang="en">Anthropic's "Building effective agents" draws a useful line: in a <strong>workflow</strong>, code decides the steps and calls the LLM at fixed points; in an <strong>agent</strong>, the model decides what to do next, which tool to use and when to stop. Agents are more flexible, but also costlier, slower, and harder to predict and debug.</p>
+<div class="grid">
+  <div class="card"><h3><span lang="zh-Hant">用 workflow</span><span lang="en">Use a workflow</span></h3>
+    <p lang="zh-Hant">步驟可以事先寫出來，例如：分類 → 檢索 → 回答 → 驗證。大多數企業流程屬於這一類。lab 的 SRE 診斷就是 workflow。</p>
+    <p lang="en">The steps can be written down in advance: classify → retrieve → answer → validate. Most enterprise processes fit here. The lab's SRE diagnosis is a workflow.</p></div>
+  <div class="card"><h3><span lang="zh-Hant">用 agent</span><span lang="en">Use an agent</span></h3>
+    <p lang="zh-Hant">步驟取決於中間結果、事先無法列舉，而且錯誤可以被偵測並復原。例如：在陌生的程式庫裡找出 bug 的原因。</p>
+    <p lang="en">The steps depend on intermediate results, can't be enumerated up front, and errors can be detected and recovered from. For example: finding the cause of a bug in an unfamiliar codebase.</p></div>
+</div>
+<p lang="zh-Hant">先從最簡單、能滿足需求的做法開始。一次 LLM 呼叫能解決的，就不需要 workflow；workflow 能解決的，就不需要 agent。</p>
+<p lang="en">Start with the simplest thing that meets the need. If one LLM call solves it, you don't need a workflow; if a workflow solves it, you don't need an agent.</p>
+
+<h2 id="loop"><span lang="zh-Hant">Agent 迴圈</span><span lang="en">The agent loop</span></h2>
+<div class="diagram" role="img" aria-label="Agent loop: planner chooses a tool; read-only tools run directly; other tools interrupt for human approval; results are written to state and checkpointed; the loop ends when the planner returns nothing or the step budget is reached.">
+  <svg viewBox="0 0 740 262" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="ah6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+    <rect class="box accent" x="20" y="80" width="130" height="56" rx="9"/>
+    <text x="85" y="104" text-anchor="middle" font-weight="700">Planner (LLM)</text>
+    <text x="85" y="123" text-anchor="middle" class="muted"><tspan lang="zh-Hant">決定下一個工具</tspan><tspan lang="en">picks next tool</tspan></text>
+    <rect class="box" x="210" y="80" width="130" height="56" rx="9"/>
+    <text x="275" y="104" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">風險判斷</tspan><tspan lang="en">Risk check</tspan></text>
+    <text x="275" y="123" text-anchor="middle" class="muted"><tspan lang="zh-Hant">看工具宣告</tspan><tspan lang="en">from tool metadata</tspan></text>
+    <rect class="box" x="400" y="20" width="140" height="50" rx="9"/>
+    <text x="470" y="50" text-anchor="middle"><tspan lang="zh-Hant">執行（唯讀）</tspan><tspan lang="en">Run (read-only)</tspan></text>
+    <rect class="box warn" x="400" y="145" width="140" height="56" rx="9"/>
+    <text x="470" y="168" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">中斷，等核准</tspan><tspan lang="en">Interrupt</tspan></text>
+    <text x="470" y="187" text-anchor="middle" class="muted"><tspan lang="zh-Hant">可等數小時</tspan><tspan lang="en">may wait hours</tspan></text>
+    <rect class="box accent" x="600" y="80" width="125" height="56" rx="9"/>
+    <text x="662" y="104" text-anchor="middle" font-weight="700">Checkpoint</text>
+    <text x="662" y="123" text-anchor="middle" class="muted"><tspan lang="zh-Hant">結果寫入狀態</tspan><tspan lang="en">result into state</tspan></text>
+    <path class="edge" d="M150 108 L208 108" marker-end="url(#ah6)"/>
+    <path class="edge" d="M340 98 C 370 70, 380 45, 398 45" marker-end="url(#ah6)"/>
+    <path class="edge" d="M340 118 C 370 150, 380 172, 398 172" marker-end="url(#ah6)"/>
+    <text x="372" y="66" class="muted">read</text><text x="350" y="160" class="muted">write</text>
+    <path class="edge" d="M540 45 C 575 45, 590 80, 610 82" marker-end="url(#ah6)"/>
+    <path class="edge" d="M540 172 C 575 172, 590 140, 610 134" marker-end="url(#ah6)"/>
+    <text x="572" y="196" class="muted"><tspan lang="zh-Hant">核准</tspan><tspan lang="en">approved</tspan></text>
+    <path class="edge accent" d="M662 136 C 662 262, 85 262, 85 138" marker-end="url(#ah6)"/>
+    <text x="370" y="255" text-anchor="middle" class="muted"><tspan lang="zh-Hant">重複，直到 planner 結束或達到步數上限</tspan><tspan lang="en">repeat until the planner stops or the step budget runs out</tspan></text>
+  </svg>
+</div>
+
+<h2 id="tools"><span lang="zh-Hant">設計工具</span><span lang="en">Designing tools</span></h2>
+<p lang="zh-Hant">工具是模型和你的系統之間的介面。好的工具設計比 prompt 技巧更能決定 agent 的可靠性。</p>
+<p lang="en">Tools are the interface between the model and your systems. Good tool design matters more for agent reliability than prompt tricks.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">原則</span><span lang="en">Principle</span></th><th><span lang="zh-Hant">不好</span><span lang="en">Bad</span></th><th><span lang="zh-Hant">好</span><span lang="en">Good</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">範圍窄</span><span lang="en">Narrow scope</span></td>
+      <td><code>run_sql(query)</code></td>
+      <td><code>get_order(order_id)</code>, <code>refund_order(order_id, amount)</code></td></tr>
+    <tr><td><span lang="zh-Hant">錯誤當結果回傳</span><span lang="en">Errors as results</span></td>
+      <td><span lang="zh-Hant">拋出例外讓整個迴圈崩潰</span><span lang="en">Throw and crash the loop</span></td>
+      <td><span lang="zh-Hant">回傳「找不到 order 123，請確認編號」，讓模型修正</span><span lang="en">Return "order 123 not found; check the id" so the model can adjust</span></td></tr>
+    <tr><td><span lang="zh-Hant">可安全重試</span><span lang="en">Safe to retry</span></td>
+      <td><span lang="zh-Hant">重試會重複扣款</span><span lang="en">A retry charges twice</span></td>
+      <td><span lang="zh-Hant">寫入類工具接受 idempotency key</span><span lang="en">Write tools accept an idempotency key</span></td></tr>
+    <tr><td><span lang="zh-Hant">輸出有上限</span><span lang="en">Bounded output</span></td>
+      <td><span lang="zh-Hant">回傳十萬列資料塞爆 context</span><span lang="en">Return 100k rows and flood the context</span></td>
+      <td><span lang="zh-Hant">分頁、摘要、明確的筆數限制</span><span lang="en">Pagination, summaries, explicit limits</span></td></tr>
+    <tr><td><span lang="zh-Hant">宣告風險</span><span lang="en">Declared risk</span></td>
+      <td><span lang="zh-Hant">掃描參數字串找 DROP、DELETE</span><span lang="en">Scan argument strings for DROP or DELETE</span></td>
+      <td><span lang="zh-Hant">每個工具標註 read / write / destructive</span><span lang="en">Each tool is tagged read / write / destructive</span></td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout bad">
+  <span class="label"><span lang="zh-Hant">為什麼不能用關鍵字判斷危險操作</span><span lang="en">Why keyword matching fails</span></span>
+  <p lang="zh-Hant">舊版教材用「SQL 字串裡有沒有 DELETE、DROP」決定要不要人工核准。這很容易被繞過：<code>WITH x AS (DELETE ...) SELECT</code>、大小寫與註解變化、呼叫有副作用的函式，或乾脆用 <code>UPDATE ... SET deleted_at = now()</code>。正確的做法是兩層：<strong>工具本身宣告風險</strong>，加上<strong>資料庫層級的權限</strong>（唯讀工具用唯讀連線）。</p>
+  <p lang="en">Older material decided on approval by checking whether a SQL string contains DELETE or DROP. That is easy to bypass: <code>WITH x AS (DELETE ...) SELECT</code>, case and comment tricks, side-effecting functions, or simply <code>UPDATE ... SET deleted_at = now()</code>. Do it in two layers instead: <strong>the tool declares its risk</strong>, and <strong>the database enforces permissions</strong> (read tools use a read-only connection).</p>
+</div>
+<figure class="code"><figcaption><span>labs/core/agent.py</span></figcaption>
+<pre><code class="language-python">def make_database():
+    uri = f"file:lab-{uuid.uuid4().hex}?mode=memory&amp;cache=shared"
+    rw = sqlite3.connect(uri, uri=True)
+    ...
+    ro = sqlite3.connect(uri, uri=True)
+    ro.execute("PRAGMA query_only = ON")  # 資料庫層級的唯讀 / enforced by the database
+    return rw, ro
+
+tools = [
+    Tool("run_select", "Run a read-only SQL query.", "read", run_select),          # 使用 ro
+    Tool("delete_expired_tokens", "Delete tokens expired more than N days ago.",
+         "destructive", delete_expired_tokens),                                     # 使用 rw，需核准
+]</code></pre>
+</figure>
+
+<h2 id="state"><span lang="zh-Hant">狀態、checkpoint 與恢復</span><span lang="en">State, checkpoints and resume</span></h2>
+<p lang="zh-Hant">人工核准可能要等幾個小時，伺服器可能在中間重新部署。所以 agent 的狀態必須能<strong>序列化並存到外部</strong>，每一步都存一次。恢復時用同一個 thread ID 讀回最後的狀態，從中斷的地方繼續。</p>
+<p lang="en">A human approval can take hours and the server may be redeployed meanwhile. So agent state must be <strong>serializable and stored externally</strong>, saved after every step. On resume, load the latest state for the same thread ID and continue where it stopped.</p>
+<p lang="zh-Hant">lab 用不到一百行實作這個機制，好讓你看清楚框架在背後做什麼：</p>
+<p lang="en">The lab implements this in under a hundred lines so you can see what frameworks do behind the scenes:</p>
+<figure class="code"><figcaption><span>labs/core/agent.py</span></figcaption>
+<pre><code class="language-python">def _loop(self, state: AgentState) -&gt; AgentState:
+    while state.status == "running":
+        if state.steps &gt;= state.max_steps:
+            state.status = "halted"                   # 預算用完 / budget exhausted
+            break
+        call = self.planner.next_action(state)
+        if call is None:
+            state.status = "done"
+            break
+        tool = self.tools.get(call.tool)
+        if tool is None:
+            state.history.append({"tool": call.tool, "args": call.args, "error": "unknown tool"})
+            state.steps += 1
+        elif tool.risk != "read":
+            state.pending = asdict(call)
+            state.status = "waiting_approval"         # interrupt
+        else:
+            self._execute(state, call)
+        self.store.save(state)                        # checkpoint（存 JSON 字串）
+    self.store.save(state)
+    return state
+
+def resume(self, thread_id: str, decision: Decision) -&gt; AgentState:
+    state = self.store.latest(thread_id)              # 可能在另一個程序裡執行
+    ...
+    state.approvals.append({"tool": call.tool, "args": call.args, "approved": decision.approved,
+                            "approver": decision.approver, "reason": decision.reason, "at": ...})</code></pre>
+</figure>
+
+<h2 id="demo"><span lang="zh-Hant">動手試：中斷與恢復</span><span lang="en">Try it: interrupt and resume</span></h2>
+<div class="demo" id="agentDemo">
+  <div class="demo-head"><span class="tag">demo</span><h3><span lang="zh-Hant">逐步執行 agent</span><span lang="en">Step through the agent</span></h3></div>
+  <div class="demo-body">
+    <p class="hint" lang="zh-Hant">與 <code>labs/core/agent.py</code> 相同的流程。選「清理過期 token」，一步步執行到中斷，然後試試「模擬程序重啟」：狀態從 checkpoint 還原，仍然停在等待核准。</p>
+    <p class="hint" lang="en">The same flow as <code>labs/core/agent.py</code>. Choose "clean up expired tokens", step until it interrupts, then try "simulate restart": the state is restored from the checkpoint and is still waiting for approval.</p>
+    <div class="row">
+      <select id="agGoal" aria-label="goal">
+        <option value="Clean up API tokens that expired over a month ago">Clean up API tokens that expired over a month ago</option>
+        <option value="Report tokens that expired over a month ago">Report tokens that expired over a month ago</option>
+      </select>
+      <label style="font-size:.88rem">max_steps <select id="agBudget"><option>8</option><option>1</option></select></label>
+    </div>
+    <div class="sm" aria-live="polite"></div>
+    <div class="row" style="font-size:.86rem;color:var(--fg-muted);gap:1.2rem">
+      <span>status: <code id="agStatus"></code></span><span>steps: <code id="agSteps"></code></span>
+      <span>checkpoints: <code id="agCk"></code></span><span><span lang="zh-Hant">資料表筆數</span><span lang="en">rows in table</span>: <code id="agRows"></code></span>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="agStep" type="button"><span lang="zh-Hant">下一步</span><span lang="en">Step</span></button>
+      <button class="btn" id="agRun" type="button"><span lang="zh-Hant">執行到停下</span><span lang="en">Run until it stops</span></button>
+      <button class="btn" id="agCrash" type="button"><span lang="zh-Hant">模擬程序重啟</span><span lang="en">Simulate restart</span></button>
+      <button class="btn ghost" id="agReset" type="button"><span lang="zh-Hant">重來</span><span lang="en">Reset</span></button>
+    </div>
+    <div class="approval" hidden>
+      <strong><span lang="zh-Hant">需要核准</span><span lang="en">Approval required</span></strong>
+      <div style="font-family:var(--font-mono);font-size:.84rem;margin:.4rem 0" id="agPending"></div>
+      <div class="row">
+        <input type="text" id="agWho" value="alice@example.com" aria-label="approver" style="flex:0 1 220px">
+        <button class="btn primary" id="agApprove" type="button"><span lang="zh-Hant">核准</span><span lang="en">Approve</span></button>
+        <button class="btn" id="agReject" type="button"><span lang="zh-Hant">拒絕</span><span lang="en">Reject</span></button>
+      </div>
+    </div>
+    <div class="output" aria-live="polite"></div>
+    <details style="margin-top:.6rem"><summary style="cursor:pointer;font-size:.88rem"><span lang="zh-Hant">核准稽核紀錄</span><span lang="en">Approval audit trail</span></summary>
+      <pre class="output" id="agAudit"></pre></details>
+  </div>
+</div>
+
+<h2 id="approval"><span lang="zh-Hant">把人工核准做對</span><span lang="en">Getting human approval right</span></h2>
+<ul lang="zh-Hant">
+  <li><strong>核准的是「確切的參數」。</strong>畫面要顯示實際會執行的內容（哪些 ID、多少筆），而不是模型寫的摘要。如果參數在核准後改變，就要重新核准。</li>
+  <li><strong>記錄誰、何時、核准了什麼、為什麼。</strong>這是稽核的需求，也是事後檢討的依據。</li>
+  <li><strong>核准要有期限。</strong>等了三天才按核准，資料可能已經不一樣了。過期就重新規劃。</li>
+  <li><strong>不要讓人疲勞。</strong>每一步都要核准，使用者很快就會不看內容直接按。只對真正有風險的操作要求核准，其餘靠權限與可回滾設計保護。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Approve the exact arguments.</strong> Show what will actually run (which IDs, how many rows), not the model's summary. If arguments change after approval, approve again.</li>
+  <li><strong>Record who approved what, when and why.</strong> Audits need it, and so do post-incident reviews.</li>
+  <li><strong>Expire approvals.</strong> If someone clicks approve three days later, the data may have changed. Re-plan instead.</li>
+  <li><strong>Avoid approval fatigue.</strong> If every step needs approval, people stop reading and click through. Require it only for genuinely risky operations; protect the rest with permissions and reversible design.</li>
+</ul>
+
+<h2 id="langgraph"><span lang="zh-Hant">用框架實作：LangGraph</span><span lang="en">With a framework: LangGraph</span></h2>
+<p lang="zh-Hant">LangGraph 提供同樣的機制：狀態圖、checkpointer、<code>interrupt()</code> 與 <code>Command(resume=...)</code>。注意這個例子讓核准畫面顯示<strong>確切要刪除的 ID</strong>，刪除時也只刪這些 ID。</p>
+<p lang="en">LangGraph provides the same mechanics: a state graph, a checkpointer, <code>interrupt()</code> and <code>Command(resume=...)</code>. Note that the approval payload shows <strong>the exact IDs to delete</strong>, and the delete touches only those IDs.</p>
+<figure class="code"><figcaption><span>cleanup_graph.py</span></figcaption>
+<pre><code class="language-python">from typing import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import InMemorySaver   # 正式環境用 PostgresSaver
+from langgraph.types import interrupt, Command
+
+class State(TypedDict, total=False):
+    expired_ids: list[int]
+    deleted: int
+
+def find_expired(state: State) -&gt; State:
+    rows = ro_db.execute("SELECT id FROM api_tokens WHERE expires_days_ago &gt; 30").fetchall()
+    return {"expired_ids": [r[0] for r in rows]}
+
+def delete_expired(state: State) -&gt; State:
+    # 恢復時，這個節點會從頭重新執行；interrupt() 之前的程式碼必須沒有副作用
+    decision = interrupt({"action": "delete_tokens", "ids": state["expired_ids"]})
+    if not decision.get("approved"):
+        return {"deleted": 0}
+    cur = rw_db.executemany("DELETE FROM api_tokens WHERE id = ?", [(i,) for i in state["expired_ids"]])
+    rw_db.commit()
+    return {"deleted": cur.rowcount}
+
+builder = StateGraph(State)
+builder.add_node("find_expired", find_expired)
+builder.add_node("delete_expired", delete_expired)
+builder.add_edge(START, "find_expired")
+builder.add_edge("find_expired", "delete_expired")
+builder.add_edge("delete_expired", END)
+graph = builder.compile(checkpointer=InMemorySaver())
+
+config = {"configurable": {"thread_id": "token-cleanup-2026-10-13"}}
+first = graph.invoke({}, config)            # 停在 interrupt；回傳值含 __interrupt__ 內容
+# ……數小時後，可能在另一個程序……
+graph.invoke(Command(resume={"approved": True, "approver": "alice@example.com"}), config)</code></pre>
+</figure>
+<div class="callout warn">
+  <span class="label"><span lang="zh-Hant">重要細節</span><span lang="en">Important detail</span></span>
+  <p lang="zh-Hant">在 LangGraph 中，恢復執行時，含有 <code>interrupt()</code> 的節點會<strong>從節點開頭重新執行</strong>。如果你在 <code>interrupt()</code> 之前寄了信或寫了資料，恢復時會再做一次。把副作用放在 interrupt 之後，或拆成獨立的節點。</p>
+  <p lang="en">In LangGraph, on resume the node containing <code>interrupt()</code> <strong>re-runs from the start of the node</strong>. If you sent an email or wrote data before <code>interrupt()</code>, it happens again. Put side effects after the interrupt, or in a separate node.</p>
+</div>
+
+<h2 id="mcp"><span lang="zh-Hant">MCP：把工具標準化</span><span lang="en">MCP: standardising tools</span></h2>
+<p lang="zh-Hant">Model Context Protocol（MCP）是一個開放協定，讓工具以統一的方式提供給各種 AI 應用：server 宣告有哪些工具與參數 schema，client（例如 IDE 或聊天應用）負責呼叫。它建立在 JSON-RPC 2.0 上，常見的傳輸方式是 stdio 與 HTTP。</p>
+<p lang="en">The Model Context Protocol (MCP) is an open protocol for exposing tools to AI applications in a uniform way: a server declares tools and their argument schemas; a client (an IDE, a chat app) calls them. It runs on JSON-RPC 2.0, typically over stdio or HTTP.</p>
+<p lang="zh-Hant">對 FDE 來說，MCP 的價值在於：同一個「查客戶工單系統」的 server，可以給 Claude Desktop、IDE 裡的 agent 或你自己寫的 workflow 共用。工具可以附上 <code>annotations</code>（例如 <code>readOnlyHint</code>、<code>destructiveHint</code>），讓 client 知道哪些操作需要確認。</p>
+<p lang="en">For an FDE, MCP's value is reuse: the same "customer ticketing" server can serve Claude Desktop, an IDE agent or your own workflow. Tools can carry <code>annotations</code> (such as <code>readOnlyHint</code> and <code>destructiveHint</code>) so clients know which operations need confirmation.</p>
+<figure class="code"><figcaption><span><span lang="zh-Hant">tools/list 回應（節錄，來自 labs/mcp_sre）</span><span lang="en">tools/list response (excerpt, from labs/mcp_sre)</span></span></figcaption>
+<pre><code class="language-json">{
+  "name": "update_cloud_run_scaling",
+  "description": "Change scaling settings of a Cloud Run service. Changes production; needs human approval.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "name": {"type": "string"},
+      "min_instances": {"type": "integer"},
+      "max_instances": {"type": "integer"}
+    },
+    "required": ["name", "min_instances", "max_instances"],
+    "additionalProperties": false
+  },
+  "annotations": {"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+}</code></pre>
+</figure>
+<div class="callout warn">
+  <span class="label"><span lang="zh-Hant">annotations 是提示，不是保證</span><span lang="en">Annotations are hints, not guarantees</span></span>
+  <p lang="zh-Hant">annotations 是 server 自己宣稱的。來自不可信 server 的「我是唯讀的」不能當成安全依據。只對你信任的 server 依 annotations 做決策，其餘一律要求確認。</p>
+  <p lang="en">Annotations are self-declared by the server. "I'm read-only" from an untrusted server is no basis for safety. Act on annotations only for servers you trust; require confirmation for everything else.</p>
+</div>
+<p lang="zh-Hant"><code>labs/mcp_sre</code> 實作了一個最小的 MCP server 與 client：握手與版本協商、notification 不回應、參數驗證、工具錯誤以 <code>isError</code> 回傳，以及「修改正式環境前必須核准、修改後重新讀取狀態驗證」的診斷流程。測試會真的以子行程啟動 server，透過 stdio 溝通。</p>
+<p lang="en"><code>labs/mcp_sre</code> implements a minimal MCP server and client: handshake and version negotiation, no responses to notifications, argument validation, tool errors returned via <code>isError</code>, and a diagnosis workflow that requires approval before changing production and re-reads status afterwards to verify. The tests launch the server as a real subprocess over stdio.</p>
+
+<h2 id="budget"><span lang="zh-Hant">預算與停止條件</span><span lang="en">Budgets and stop conditions</span></h2>
+<ul lang="zh-Hant">
+  <li><strong>步數上限</strong>：防止在兩個工具之間無限來回。</li>
+  <li><strong>token 或金額上限</strong>：每次任務、每位使用者、每天。</li>
+  <li><strong>時間上限</strong>：使用者在等的請求，要有明確的逾時與降級回應。</li>
+  <li><strong>停下來時要說清楚</strong>：「已達步數上限，目前完成了 A、B，C 尚未處理」，而不是靜靜失敗。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Step limit</strong>: stops endless ping-pong between two tools.</li>
+  <li><strong>Token or spend limit</strong>: per task, per user, per day.</li>
+  <li><strong>Time limit</strong>: requests a user is waiting on need explicit timeouts and a degraded response.</li>
+  <li><strong>Stop loudly</strong>: "step budget reached; A and B are done, C is not", rather than failing silently.</li>
+</ul>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">1. 要防止 agent 修改資料庫，最可靠的做法是？</span><span lang="en">1. The most reliable way to stop an agent from modifying the database?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">在 system prompt 寫「絕對不要修改資料」。</span><span lang="en">Write "never modify data" in the system prompt.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">檢查 SQL 字串裡有沒有 INSERT、UPDATE、DELETE。</span><span lang="en">Check SQL strings for INSERT, UPDATE or DELETE.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">讓讀取工具使用資料庫層級的唯讀帳號或連線。</span><span lang="en">Give read tools a read-only database account or connection.</span></span></label>
+    <div class="explain" lang="zh-Hant">prompt 可以被忽略或被注入覆蓋；關鍵字比對可以被繞過。資料庫權限是在模型之外、無法被說服的邊界。</div>
+    <div class="explain" lang="en">Prompts can be ignored or overridden by injection; keyword checks can be bypassed. Database permissions are a boundary outside the model that can't be talked around.</div>
+  </fieldset>
+  <fieldset data-answer="a">
+    <legend><span lang="zh-Hant">2. 一個每週產生固定格式報表的任務：讀三個資料來源、彙整、寫摘要。應該用？</span><span lang="en">2. A weekly report: read three sources, aggregate, write a summary. Use:</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">固定步驟的 workflow，只在寫摘要時呼叫 LLM。</span><span lang="en">A fixed workflow that calls the LLM only for the summary.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">自主 agent，讓模型決定要讀哪些資料。</span><span lang="en">An autonomous agent that decides which data to read.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">多個 agent 互相協作。</span><span lang="en">Several collaborating agents.</span></span></label>
+    <div class="explain" lang="zh-Hant">步驟可以事先寫出來，用 workflow 更便宜、更穩定、更好除錯。</div>
+    <div class="explain" lang="en">The steps are known in advance, so a workflow is cheaper, steadier and easier to debug.</div>
+  </fieldset>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">3. 核准畫面應該顯示什麼？</span><span lang="en">3. What should the approval screen show?</span></legend>
+    <label><input type="radio" name="q3" value="a"><span><span lang="zh-Hant">模型寫的一句話摘要，例如「清理過期資料」。</span><span lang="en">The model's one-line summary, e.g. "clean up expired data".</span></span></label>
+    <label><input type="radio" name="q3" value="b"><span><span lang="zh-Hant">實際要執行的工具與確切參數（例如要刪除的 ID 清單）。</span><span lang="en">The actual tool and exact arguments (e.g. the list of IDs to delete).</span></span></label>
+    <label><input type="radio" name="q3" value="c"><span><span lang="zh-Hant">只要一個「確定」按鈕，避免打擾使用者。</span><span lang="en">Just an OK button to avoid bothering the user.</span></span></label>
+    <div class="explain" lang="zh-Hant">摘要可能和實際操作不一致。核准的對象必須是確切會被執行的內容。</div>
+    <div class="explain" lang="en">A summary can differ from what actually runs. Approval must cover exactly what will be executed.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

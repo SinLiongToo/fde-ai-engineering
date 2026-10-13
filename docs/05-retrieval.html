@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="05-retrieval"
+  data-title-zh="05 檢索與 RAG · AI 工程實戰課"
+  data-title-en="05 Retrieval and RAG · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05 檢索與 RAG · AI 工程實戰課</title>
+<meta name="description" content="詞彙檢索與向量檢索各自的盲點、RRF 名次融合、權限過濾、切段、pgvector 混合查詢，以及用 recall@k 量測檢索品質。附可操作的瀏覽器示範。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/demos/retrieval.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">第 5 章</span><span lang="en">Chapter 5</span></div>
+<h1><span lang="zh-Hant">檢索與 RAG</span><span lang="en">Retrieval and RAG</span></h1>
+<p class="lede" lang="zh-Hant">RAG 的品質上限由檢索決定：沒被找出來的文件，模型不可能引用。這一章談怎麼把檢索做對、怎麼在權限之內做，以及怎麼量測它到底做得好不好。</p>
+<p class="lede" lang="en">Retrieval sets the ceiling on RAG quality: a document that isn't found can't be cited. This chapter covers getting retrieval right, doing it within permissions, and measuring whether it actually works.</p>
+<div class="meta"><span>⏱ 35 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>labs/core/retrieval.py</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">讀完這章你能夠</span><span lang="en">After this chapter you can</span></h2>
+  <ul lang="zh-Hant">
+    <li>判斷什麼時候需要檢索，什麼時候把文件直接放進 context 就好。</li>
+    <li>說明詞彙檢索與向量檢索各自會漏掉哪些問題，並用 RRF 融合兩者。</li>
+    <li>在查詢階段就套用權限過濾，而不是查完再刪。</li>
+    <li>用 recall@k 與 MRR 量測檢索品質，並和生成品質分開評估。</li>
+  </ul>
+  <ul lang="en">
+    <li>Decide when you need retrieval and when putting documents straight into context is enough.</li>
+    <li>Explain which queries lexical and vector search each miss, and fuse them with RRF.</li>
+    <li>Apply permission filters inside the query, not after it.</li>
+    <li>Measure retrieval with recall@k and MRR, separately from generation quality.</li>
+  </ul>
+</section>
+
+<h2 id="need"><span lang="zh-Hant">先問：需要檢索嗎？</span><span lang="en">First: do you need retrieval?</span></h2>
+<p lang="zh-Hant">現在的模型 context window 很大，如果資料只有幾十份文件、不常更新、所有使用者都能看，直接放進 prompt（搭配 prompt caching 降低成本）往往更簡單、品質也更好。以下情況才需要檢索：</p>
+<p lang="en">Context windows are now large. If the data is a few dozen documents, rarely updated and visible to every user, putting it straight into the prompt (with prompt caching to cut cost) is often simpler and better. You need retrieval when:</p>
+<ul lang="zh-Hant">
+  <li><strong>資料量</strong>超過 context 能放的範圍，或每次都放進去成本太高。</li>
+  <li><strong>權限</strong>：不同使用者能看的文件不同。</li>
+  <li><strong>新鮮度</strong>：資料持續更新，需要增量索引。</li>
+  <li><strong>可追溯</strong>：需要精確指出答案出自哪一段。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Volume</strong> exceeds what fits in context, or including it every time costs too much.</li>
+  <li><strong>Permissions</strong> differ between users.</li>
+  <li><strong>Freshness</strong>: data keeps changing and needs incremental indexing.</li>
+  <li><strong>Traceability</strong>: you must point to the exact passage behind an answer.</li>
+</ul>
+
+<h2 id="pipeline"><span lang="zh-Hant">整體流程</span><span lang="en">The pipeline</span></h2>
+<div class="diagram" role="img" aria-label="Ingestion: parse, chunk, attach metadata and permissions, index. Query: permission filter, lexical and vector candidates, RRF fusion, optional rerank, context with ids, generation, citation check.">
+  <svg viewBox="0 0 740 250" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="ah5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+    <text x="10" y="22" font-weight="700"><tspan lang="zh-Hant">建索引（離線）</tspan><tspan lang="en">Indexing (offline)</tspan></text>
+    <rect class="box" x="10" y="34" width="120" height="44" rx="8"/><text x="70" y="61" text-anchor="middle"><tspan lang="zh-Hant">解析文件</tspan><tspan lang="en">Parse</tspan></text>
+    <rect class="box" x="155" y="34" width="120" height="44" rx="8"/><text x="215" y="61" text-anchor="middle"><tspan lang="zh-Hant">依結構切段</tspan><tspan lang="en">Chunk by structure</tspan></text>
+    <rect class="box warn" x="300" y="34" width="140" height="44" rx="8"/><text x="370" y="61" text-anchor="middle"><tspan lang="zh-Hant">附上權限與來源</tspan><tspan lang="en">Attach ACL + source</tspan></text>
+    <rect class="box" x="465" y="34" width="150" height="44" rx="8"/><text x="540" y="61" text-anchor="middle"><tspan lang="zh-Hant">全文 + 向量索引</tspan><tspan lang="en">Full-text + vector index</tspan></text>
+    <path class="edge" d="M130 56 L153 56" marker-end="url(#ah5)"/><path class="edge" d="M275 56 L298 56" marker-end="url(#ah5)"/><path class="edge" d="M440 56 L463 56" marker-end="url(#ah5)"/>
+
+    <text x="10" y="122" font-weight="700"><tspan lang="zh-Hant">查詢（線上）</tspan><tspan lang="en">Query (online)</tspan></text>
+    <rect class="box warn" x="10" y="134" width="110" height="44" rx="8"/><text x="65" y="161" text-anchor="middle"><tspan lang="zh-Hant">權限過濾</tspan><tspan lang="en">ACL filter</tspan></text>
+    <rect class="box" x="145" y="124" width="110" height="30" rx="7"/><text x="200" y="144" text-anchor="middle">BM25</text>
+    <rect class="box" x="145" y="160" width="110" height="30" rx="7"/><text x="200" y="180" text-anchor="middle"><tspan lang="zh-Hant">向量</tspan><tspan lang="en">Vector</tspan></text>
+    <rect class="box accent" x="280" y="134" width="90" height="44" rx="8"/><text x="325" y="161" text-anchor="middle">RRF</text>
+    <rect class="box" x="395" y="134" width="100" height="44" rx="8"/><text x="445" y="155" text-anchor="middle"><tspan lang="zh-Hant">重排序</tspan><tspan lang="en">Rerank</tspan></text><text x="445" y="170" text-anchor="middle" class="muted"><tspan lang="zh-Hant">選用</tspan><tspan lang="en">optional</tspan></text>
+    <rect class="box" x="520" y="134" width="90" height="44" rx="8"/><text x="565" y="161" text-anchor="middle">LLM</text>
+    <rect class="box accent" x="635" y="134" width="100" height="44" rx="8"/><text x="685" y="155" text-anchor="middle"><tspan lang="zh-Hant">檢查引用</tspan><tspan lang="en">Check cites</tspan></text><text x="685" y="170" text-anchor="middle" class="muted"><tspan lang="zh-Hant">第 4 章</tspan><tspan lang="en">chapter 4</tspan></text>
+    <path class="edge" d="M120 150 L143 140" marker-end="url(#ah5)"/><path class="edge" d="M120 162 L143 172" marker-end="url(#ah5)"/>
+    <path class="edge" d="M255 140 L278 150" marker-end="url(#ah5)"/><path class="edge" d="M255 175 L278 165" marker-end="url(#ah5)"/>
+    <path class="edge" d="M370 156 L393 156" marker-end="url(#ah5)"/><path class="edge" d="M495 156 L518 156" marker-end="url(#ah5)"/><path class="edge" d="M610 156 L633 156" marker-end="url(#ah5)"/>
+    <path class="edge dashed" d="M540 78 C 540 100, 200 100, 200 122" marker-end="url(#ah5)"/>
+    <text x="370" y="225" text-anchor="middle" class="muted"><tspan lang="zh-Hant">權限在兩個地方出現：建索引時附上，查詢時先過濾</tspan><tspan lang="en">Permissions appear twice: attached at indexing, applied first at query time</tspan></text>
+  </svg>
+</div>
+
+<h2 id="chunking"><span lang="zh-Hant">切段</span><span lang="en">Chunking</span></h2>
+<ul lang="zh-Hant">
+  <li><strong>依文件結構切</strong>（標題、條款、段落），不要只按固定字數切。條款被切成兩半，兩半都沒用。</li>
+  <li><strong>每段帶上下文</strong>：文件標題、章節標題。單獨拿出來看，要知道它在講什麼。lab 的 runbook 切段就是這樣做的。</li>
+  <li><strong>保留來源</strong>：文件 ID、段落編號、頁碼或位移，引用與除錯都需要。</li>
+  <li><strong>表格與 PDF 要特別處理。</strong>解析品質常常比 embedding 模型的選擇更影響結果。先人工檢查幾份解析後的文字。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Split by document structure</strong> (headings, clauses, paragraphs), not just fixed character counts. A clause split in half makes both halves useless.</li>
+  <li><strong>Give each chunk context</strong>: document title and section heading. Read on its own, a chunk should make sense. The lab's runbook chunker does this.</li>
+  <li><strong>Keep provenance</strong>: document ID, section number, page or offset. Citations and debugging need it.</li>
+  <li><strong>Tables and PDFs need care.</strong> Parsing quality often matters more than the choice of embedding model. Inspect some parsed output by hand first.</li>
+</ul>
+
+<h2 id="lexvec"><span lang="zh-Hant">詞彙檢索與向量檢索</span><span lang="en">Lexical vs vector search</span></h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th></th><th><span lang="zh-Hant">詞彙（BM25）</span><span lang="en">Lexical (BM25)</span></th><th><span lang="zh-Hant">向量（embedding）</span><span lang="en">Vector (embeddings)</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">擅長</span><span lang="en">Good at</span></td>
+      <td><span lang="zh-Hant">錯誤碼、料號、設定名稱、人名、罕見詞</span><span lang="en">Error codes, part numbers, setting names, names, rare words</span></td>
+      <td><span lang="zh-Hant">換句話說、同義詞、口語描述</span><span lang="en">Paraphrases, synonyms, casual descriptions</span></td></tr>
+    <tr><td><span lang="zh-Hant">會漏掉</span><span lang="en">Misses</span></td>
+      <td><span lang="zh-Hant">用詞不同但意思相同的查詢</span><span lang="en">Queries that use different words for the same idea</span></td>
+      <td><span lang="zh-Hant">精確代號（PAY-4102 和 PAY-4103 在向量上幾乎一樣）</span><span lang="en">Exact identifiers (PAY-4102 and PAY-4103 look almost identical as vectors)</span></td></tr>
+    <tr><td><span lang="zh-Hant">分數</span><span lang="en">Scores</span></td>
+      <td><span lang="zh-Hant">無上限，依語料而變</span><span lang="en">Unbounded, corpus-dependent</span></td>
+      <td><span lang="zh-Hant">通常 −1 到 1</span><span lang="en">Typically −1 to 1</span></td></tr>
+  </tbody>
+</table>
+</div>
+<p lang="zh-Hant">兩者的盲點剛好互補，所以實務上常同時跑兩種，再把結果融合。</p>
+<p lang="en">Their blind spots complement each other, so in practice you often run both and fuse the results.</p>
+
+<h3><span lang="zh-Hant">Reciprocal Rank Fusion</span><span lang="en">Reciprocal Rank Fusion</span></h3>
+<p lang="zh-Hant">兩種分數的尺度不同，直接相加沒有意義。RRF（Cormack 等人，2009）只看<strong>名次</strong>：</p>
+<p lang="en">The two scores live on different scales, so adding them is meaningless. RRF (Cormack et al., 2009) uses only <strong>ranks</strong>:</p>
+<figure class="code"><figcaption><span>RRF</span></figcaption>
+<pre><code>RRF(d) = Σ  1 / (k + rank_r(d))      rank 從 1 開始 / ranks start at 1
+         r</code></pre>
+</figure>
+<p lang="zh-Hant"><code>k</code> 控制「前幾名比後幾名重要多少」。k 越小，第一名的優勢越大；k 越大，各名次的貢獻越平均。60 是原論文的經驗值，通常不用調。在兩份清單都出現的文件，分數會比只在一份清單拿第一名的文件高，這正是融合想要的效果。</p>
+<p lang="en"><code>k</code> controls how much more top ranks count than lower ones. Smaller k gives first place a bigger edge; larger k flattens the contributions. 60 comes from the original paper and rarely needs tuning. A document appearing in both lists usually outscores one that tops only a single list, which is exactly the point of fusion.</p>
+
+<h2 id="demo"><span lang="zh-Hant">動手試：混合檢索</span><span lang="en">Try it: hybrid retrieval</span></h2>
+<div class="demo" id="retrievalDemo">
+  <div class="demo-head"><span class="tag">demo</span><h3><span lang="zh-Hant">BM25 + 向量 + RRF，含權限過濾</span><span lang="en">BM25 + vector + RRF, with permission filtering</span></h3></div>
+  <div class="demo-body">
+    <p class="hint" lang="zh-Hant">與 Python lab 相同的語料與演算法（JS 版，結果一致）。⚠ 這裡的「向量」是字元 3-gram，能處理詞形變化（migrate／migration），<strong>不懂同義詞</strong>。試試最後一個查詢：它在 lab 的測試集裡是已知的失敗案例。</p>
+    <p class="hint" lang="en">Same corpus and algorithms as the Python lab (JS port, identical results). ⚠ The "vector" side here is character 3-grams: it handles word forms (migrate/migration) but <strong>not synonyms</strong>. Try the last query: it is a known failure in the lab's test set.</p>
+    <div class="row">
+      <button class="chip" data-q="PAY-4102">PAY-4102</button>
+      <button class="chip" data-q="how do I migrate a big postgres table safely">migrate a big postgres table</button>
+      <button class="chip" data-q="personal data leaving the EU">personal data leaving the EU</button>
+      <button class="chip" data-q="where are API keys stored">where are API keys stored</button>
+      <button class="chip" data-q="who is woken up at night">who is woken up at night</button>
+    </div>
+    <div class="row"><input type="text" id="rq" value="how do I migrate a big postgres table safely" aria-label="query"></div>
+    <div class="row" style="font-size:.88rem;gap:1rem">
+      <span><span lang="zh-Hant">使用者群組：</span><span lang="en">User groups:</span></span>
+      <label><input type="checkbox" name="grp" value="legal"> legal</label>
+      <label><input type="checkbox" name="grp" value="security"> security</label>
+      <label style="color:var(--bad)"><input type="checkbox" id="noacl"> <span lang="zh-Hant">忽略權限（示範外洩）</span><span lang="en">Ignore ACL (show the leak)</span></label>
+    </div>
+    <div class="row" style="font-size:.88rem">
+      <label for="rk">RRF k = <strong id="rkv">60</strong></label>
+      <input type="range" id="rk" min="1" max="120" value="60" style="flex:1 1 200px">
+    </div>
+    <div style="font-size:.84rem;color:var(--fg-muted)"><span lang="zh-Hant">查詢 token（已去除停用詞）：</span><span lang="en">Query tokens (stop words removed):</span> <code id="rtokens"></code></div>
+    <div class="cols">
+      <div class="col"><h4>BM25</h4><div id="colLex"></div></div>
+      <div class="col"><h4><span lang="zh-Hant">向量（3-gram）</span><span lang="en">Vector (3-gram)</span></h4><div id="colVec"></div></div>
+      <div class="col fused"><h4>RRF top 3</h4><div id="colRrf"></div></div>
+    </div>
+  </div>
+</div>
+<p lang="zh-Hant">可以觀察到：<code>PAY-4102</code> 由 BM25 精準命中；「migrate a big postgres table」BM25 完全找不到（migrate ≠ migration、postgres ≠ postgresql），3-gram 找得到；勾選「忽略權限」再查 personal data，會看到無權限的 CLAUSE-002 出現在結果中。</p>
+<p lang="en">Things to notice: BM25 nails <code>PAY-4102</code>; for "migrate a big postgres table" BM25 finds nothing (migrate ≠ migration, postgres ≠ postgresql) while 3-grams do; tick "ignore ACL" and search for personal data to see the restricted CLAUSE-002 appear.</p>
+
+<h2 id="acl"><span lang="zh-Hant">權限：在查詢裡過濾</span><span lang="en">Permissions: filter inside the query</span></h2>
+<p lang="zh-Hant">常見的錯誤是先取前 k 筆，再把使用者無權看的刪掉。這有兩個問題：結果可能被刪到剩零筆；更糟的是，只要中間有任何一層（快取、log、重排序服務）看到未過濾的結果，就已經外洩了。<strong>權限條件要放在查詢本身的 WHERE 裡</strong>，而且要用發出請求的使用者身分，不是服務帳號的身分。</p>
+<p lang="en">A common mistake is to take the top k and then drop what the user can't see. Two problems: the result can shrink to zero, and worse, any layer that sees the unfiltered list (a cache, a log, a reranking service) has already leaked it. <strong>Put the permission condition in the query's WHERE clause</strong>, using the requesting user's identity, not a service account's.</p>
+
+<h3><span lang="zh-Hant">PostgreSQL + pgvector 範例</span><span lang="en">PostgreSQL + pgvector example</span></h3>
+<p lang="zh-Hant">如果客戶已經在用 PostgreSQL，混合檢索可以在同一個資料庫裡完成，權限規則和資料放在一起。注意內層子查詢先 <code>ORDER BY ... LIMIT</code>，才能用到 HNSW 索引。</p>
+<p lang="en">If the customer already runs PostgreSQL, hybrid retrieval can live in the same database, with access rules next to the data. Note the inner subqueries do <code>ORDER BY ... LIMIT</code> first so the HNSW index can be used.</p>
+<figure class="code"><figcaption><span>hybrid_search.sql</span></figcaption>
+<pre><code class="language-sql">CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE chunks (
+    id             bigserial PRIMARY KEY,
+    doc_id         text   NOT NULL,
+    title          text   NOT NULL,
+    body           text   NOT NULL,
+    allowed_groups text[] NOT NULL DEFAULT '{everyone}',
+    embedding      vector(1024) NOT NULL,     -- 維度依 embedding 模型 / depends on the model
+    tsv            tsvector GENERATED ALWAYS AS (to_tsvector('english', title || ' ' || body)) STORED
+);
+CREATE INDEX ON chunks USING hnsw (embedding vector_cosine_ops);   -- 預設 m=16, ef_construction=64
+CREATE INDEX ON chunks USING gin (tsv);
+CREATE INDEX ON chunks USING gin (allowed_groups);
+
+-- $1 = query embedding, $2 = query text, $3 = requesting user's groups (text[])
+WITH lexical AS (
+    SELECT id, row_number() OVER (ORDER BY rank DESC) AS rnk
+    FROM (
+        SELECT id, ts_rank_cd(tsv, q) AS rank
+        FROM chunks, websearch_to_tsquery('english', $2) AS q
+        WHERE tsv @@ q AND allowed_groups &amp;&amp; $3::text[]
+        ORDER BY rank DESC
+        LIMIT 30
+    ) s
+),
+semantic AS (
+    SELECT id, row_number() OVER (ORDER BY dist) AS rnk
+    FROM (
+        SELECT id, embedding &lt;=&gt; $1::vector AS dist
+        FROM chunks
+        WHERE allowed_groups &amp;&amp; $3::text[]
+        ORDER BY embedding &lt;=&gt; $1::vector
+        LIMIT 30
+    ) s
+)
+SELECT c.id, c.doc_id, c.title, c.body, sum(1.0 / (60 + r.rnk)) AS rrf
+FROM (SELECT * FROM lexical UNION ALL SELECT * FROM semantic) r
+JOIN chunks c USING (id)
+GROUP BY c.id
+ORDER BY rrf DESC
+LIMIT 8;</code></pre>
+</figure>
+<div class="callout warn">
+  <span class="label"><span lang="zh-Hant">過濾與近似索引</span><span lang="en">Filters and approximate indexes</span></span>
+  <p lang="zh-Hant">HNSW 先找近鄰再套用 WHERE，如果使用者能看的文件很少，可能回傳不到 30 筆。pgvector 0.8 以後可以開啟 iterative index scan（<code>SET hnsw.iterative_scan = relaxed_order;</code>）緩解；權限群組很少時，也可以考慮依群組建立部分索引。上線前要用「權限很少的使用者」實測。</p>
+  <p lang="en">HNSW finds neighbours first and applies WHERE afterwards, so for users who can see few documents you may get fewer than 30 rows. pgvector 0.8+ offers iterative index scans (<code>SET hnsw.iterative_scan = relaxed_order;</code>) to mitigate this; with few permission groups, partial indexes per group are another option. Test with a low-privilege user before launch.</p>
+</div>
+<div class="callout note">
+  <span class="label"><span lang="zh-Hant">中文內容</span><span lang="en">Chinese text</span></span>
+  <p lang="zh-Hant">PostgreSQL 內建的 <code>to_tsvector</code> 不會斷中文詞，lab 的 tokenizer 也只處理英數字。中文全文檢索需要斷詞擴充（例如 zhparser、pg_jieba）或以字元 n-gram 為基礎的索引（例如 pg_trgm、pg_bigm）。這是在台灣客戶專案中很常被忽略的一點，建議早期就用真實的中文查詢測試。</p>
+  <p lang="en">PostgreSQL's built-in <code>to_tsvector</code> doesn't segment Chinese, and the lab tokenizer only handles alphanumerics. Chinese full-text search needs a segmentation extension (e.g. zhparser, pg_jieba) or character n-gram indexes (e.g. pg_trgm, pg_bigm). This is often overlooked on projects with Chinese-language data; test with real Chinese queries early.</p>
+</div>
+
+<h2 id="rerank"><span lang="zh-Hant">重排序</span><span lang="en">Reranking</span></h2>
+<p lang="zh-Hant">cross-encoder 重排序模型會同時讀查詢與候選段落，判斷相關性，通常比單純的向量相似度準，但每個候選都要算一次，會增加延遲與成本。做法是先用便宜的方法取 20 到 50 個候選，再重排序取前幾名。<strong>要不要加，用測試集量過再決定</strong>：如果 RRF 的 recall@5 已經很高，重排序的效益可能很小。</p>
+<p lang="en">A cross-encoder reranker reads the query and each candidate together to judge relevance. It is usually more accurate than vector similarity alone, but it runs once per candidate, adding latency and cost. Take 20–50 candidates cheaply, then rerank to the top few. <strong>Decide whether to add it by measuring on your test set</strong>: if RRF's recall@5 is already high, the gain may be small.</p>
+
+<h2 id="measure"><span lang="zh-Hant">量測檢索品質</span><span lang="en">Measuring retrieval</span></h2>
+<p lang="zh-Hant">把檢索和生成分開評估。答案錯了，你需要知道是「沒找到對的文件」還是「找到了但模型用錯」，兩者的修法完全不同。</p>
+<p lang="en">Evaluate retrieval separately from generation. When an answer is wrong you need to know whether the right document wasn't found or was found and misused; the fixes are completely different.</p>
+<ul lang="zh-Hant">
+  <li><strong>recall@k</strong>：相關文件中，有多少出現在前 k 筆。RAG 最重要的指標，因為沒進前 k 筆的文件模型看不到。</li>
+  <li><strong>MRR</strong>：第一個相關文件名次的倒數平均。衡量「對的東西排得夠不夠前面」。</li>
+  <li><strong>權限外洩數</strong>：權限測試案例中，回傳了無權限文件的次數。這個必須是 0。</li>
+</ul>
+<ul lang="en">
+  <li><strong>recall@k</strong>: the share of relevant documents appearing in the top k. The key RAG metric, because the model never sees anything outside the top k.</li>
+  <li><strong>MRR</strong>: mean reciprocal rank of the first relevant document; how high the right thing ranks.</li>
+  <li><strong>Permission leaks</strong>: how often permission test cases return unauthorised documents. Must be zero.</li>
+</ul>
+<figure class="code"><figcaption><span>labs/core/retrieval.py</span></figcaption>
+<pre><code class="language-python">def recall_at_k(retrieved: list[str], relevant: set[str], k: int) -&gt; float:
+    if not relevant:
+        return 1.0
+    return len(set(retrieved[:k]) &amp; relevant) / len(relevant)
+
+
+def reciprocal_rank(retrieved: list[str], relevant: set[str]) -&gt; float:
+    for rank, doc_id in enumerate(retrieved, start=1):
+        if doc_id in relevant:
+            return 1.0 / rank
+    return 0.0</code></pre>
+</figure>
+<p lang="zh-Hant">第 7 章會把這些指標放進一個可以在 CI 執行的評測流程。</p>
+<p lang="en">Chapter 7 puts these metrics into an evaluation run you can execute in CI.</p>
+
+<h2 id="pitfalls"><span lang="zh-Hant">常見錯誤</span><span lang="en">Common mistakes</span></h2>
+<ul lang="zh-Hant">
+  <li><strong>換了 embedding 模型卻沒重建索引。</strong>不同模型的向量不能混用，要整批重算。</li>
+  <li><strong>索引過期。</strong>文件更新或刪除後，舊段落仍被檢索到。建立增量更新與刪除的流程，並監控索引延遲。</li>
+  <li><strong>只用向量檢索。</strong>精確代號類的查詢會大量失敗，而這類查詢在企業環境非常多。</li>
+  <li><strong>只看最終答案評分。</strong>分不出是檢索還是生成出問題。</li>
+  <li><strong>相信 demo 的語料。</strong>真實文件有掃描檔、表格、重複版本、過時內容，先看資料再設計。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Changing the embedding model without re-indexing.</strong> Vectors from different models don't mix; recompute everything.</li>
+  <li><strong>Stale indexes.</strong> Updated or deleted documents still get retrieved. Build incremental update and delete paths and monitor index lag.</li>
+  <li><strong>Vector-only search.</strong> Exact-identifier queries fail en masse, and enterprises are full of them.</li>
+  <li><strong>Scoring only final answers.</strong> You can't tell whether retrieval or generation broke.</li>
+  <li><strong>Trusting a demo corpus.</strong> Real documents include scans, tables, duplicate versions and stale content; look at the data before designing.</li>
+</ul>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">1. 使用者查「PAY-4102 是什麼意思」，純向量檢索回傳了 PAY-4103 的文件。最合適的改善是？</span><span lang="en">1. A user asks "what does PAY-4102 mean" and vector-only search returns the PAY-4103 document. Best fix?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">換一個維度更高的 embedding 模型。</span><span lang="en">Switch to a higher-dimensional embedding model.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">加入詞彙檢索並用 RRF 融合。</span><span lang="en">Add lexical search and fuse with RRF.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">在 prompt 裡要求模型仔細看代號。</span><span lang="en">Tell the model in the prompt to read the code carefully.</span></span></label>
+    <div class="explain" lang="zh-Hant">精確代號是向量檢索的已知盲點；換模型通常改善有限。prompt 救不了沒被檢索到的文件。</div>
+    <div class="explain" lang="en">Exact identifiers are a known blind spot of vector search; a different model rarely fixes it. No prompt can rescue a document that was never retrieved.</div>
+  </fieldset>
+  <fieldset data-answer="a">
+    <legend><span lang="zh-Hant">2. 為什麼 RRF 用名次而不是把 BM25 分數和 cosine 相加？</span><span lang="en">2. Why does RRF use ranks instead of adding BM25 and cosine scores?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">兩種分數尺度不同，直接相加會讓其中一種主導結果。</span><span lang="en">The scores are on different scales; adding them lets one dominate.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">名次計算比較快。</span><span lang="en">Ranks are faster to compute.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">分數不可靠，名次才可靠。</span><span lang="en">Scores are unreliable; ranks are reliable.</span></span></label>
+    <div class="explain" lang="zh-Hant">BM25 沒有上限且依語料而變，cosine 大致在 −1 到 1。用名次就不需要正規化。</div>
+    <div class="explain" lang="en">BM25 is unbounded and corpus-dependent while cosine sits roughly in −1..1. Ranks avoid normalisation entirely.</div>
+  </fieldset>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">3. 權限過濾應該放在哪裡？</span><span lang="en">3. Where should permission filtering happen?</span></legend>
+    <label><input type="radio" name="q3" value="a"><span><span lang="zh-Hant">在 prompt 裡告訴模型「不要引用使用者無權看的文件」。</span><span lang="en">In the prompt: "don't cite documents the user may not see".</span></span></label>
+    <label><input type="radio" name="q3" value="b"><span><span lang="zh-Hant">取得前 k 筆後，在應用程式裡刪掉無權限的。</span><span lang="en">After fetching the top k, drop unauthorised ones in application code.</span></span></label>
+    <label><input type="radio" name="q3" value="c"><span><span lang="zh-Hant">在檢索查詢本身的條件裡，用請求者的身分過濾。</span><span lang="en">Inside the retrieval query itself, filtering by the requester's identity.</span></span></label>
+    <div class="explain" lang="zh-Hant">prompt 不是安全邊界；事後過濾會讓結果變少，而且中間任何一層都可能已經看到未授權的內容。</div>
+    <div class="explain" lang="en">A prompt is not a security boundary; post-filtering shrinks results, and any intermediate layer may already have seen unauthorised content.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

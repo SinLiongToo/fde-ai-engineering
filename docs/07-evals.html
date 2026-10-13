@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="07-evals"
+  data-title-zh="07 評測：把感覺變成數字 · AI 工程實戰課"
+  data-title-en="07 Evals: from vibes to numbers · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>07 評測：把感覺變成數字 · AI 工程實戰課</title>
+<meta name="description" content="從錯誤分析建立測試集、優先用程式評分、LLM 評審的偏誤與校準、在 CI 中和 baseline 比較，以及小樣本的雜訊問題。附互動示範。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/demos/evalnoise.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">第 7 章</span><span lang="en">Chapter 7</span></div>
+<h1><span lang="zh-Hant">評測：把感覺變成數字</span><span lang="en">Evals: from vibes to numbers</span></h1>
+<p class="lede" lang="zh-Hant">改了 prompt、換了模型、調了切段，系統是變好還是變差？沒有評測，你只能憑感覺回答；而感覺通常來自你剛好試的那三個問題。評測讓「改進」變成可以驗證的主張。</p>
+<p class="lede" lang="en">You changed the prompt, the model or the chunking. Is the system better or worse? Without evals you answer by feel, and the feeling usually comes from the three questions you happened to try. Evals turn "improvement" into a claim you can check.</p>
+<div class="meta"><span>⏱ 30 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>labs/core/evals.py</code> · <code>golden_set.jsonl</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">讀完這章你能夠</span><span lang="en">After this chapter you can</span></h2>
+  <ul lang="zh-Hant">
+    <li>從真實的失敗案例出發，建立有分類標籤的測試集。</li>
+    <li>為每一種檢查選對評分方式：程式、LLM 評審或人工。</li>
+    <li>在 CI 中與 baseline 比較，擋下退步，同時不被雜訊誤導。</li>
+    <li>說明 LLM 評審的常見偏誤，以及怎麼用人工標註校準它。</li>
+  </ul>
+  <ul lang="en">
+    <li>Build a tagged test set starting from real failures.</li>
+    <li>Pick the right grader for each check: code, LLM judge or human.</li>
+    <li>Gate against a baseline in CI, blocking regressions without being fooled by noise.</li>
+    <li>Explain common LLM-judge biases and how to calibrate a judge with human labels.</li>
+  </ul>
+</section>
+
+<h2 id="analysis"><span lang="zh-Hant">從錯誤分析開始，不是從指標開始</span><span lang="en">Start with error analysis, not metrics</span></h2>
+<p lang="zh-Hant">常見的錯誤是一開始就套用現成的指標庫（「faithfulness」「relevance」），然後對著分數調整。比較有效的順序是：</p>
+<p lang="en">A common mistake is to start by adopting an off-the-shelf metric suite ("faithfulness", "relevance") and tune against those scores. A more effective order:</p>
+<ol class="steps">
+  <li><strong><span lang="zh-Hant">看真實的輸出</span><span lang="en">Read real outputs</span></strong>
+    <span lang="zh-Hant">拿 50 到 100 筆真實的請求與回應（含檢索結果與工具呼叫），一筆一筆讀，記下哪裡不對。</span>
+    <span lang="en">Take 50–100 real requests and responses (with retrieval results and tool calls) and read them one by one, noting what's wrong.</span></li>
+  <li><strong><span lang="zh-Hant">把問題分類</span><span lang="en">Group the problems</span></strong>
+    <span lang="zh-Hant">例如：沒找到對的文件、找到但答錯、引用不存在的段落、該拒答卻硬答、格式錯。數一數各類有多少。</span>
+    <span lang="en">For example: right document not retrieved, retrieved but misread, cited a non-existent passage, answered when it should have declined, wrong format. Count each category.</span></li>
+  <li><strong><span lang="zh-Hant">針對最大的類別寫測試</span><span lang="en">Write tests for the biggest categories</span></strong>
+    <span lang="zh-Hant">每個案例加上類別標籤。這樣分數退步時，你知道是哪一類壞了。</span>
+    <span lang="en">Tag each case with its category, so when a score drops you know which kind of behaviour broke.</span></li>
+  <li><strong><span lang="zh-Hant">持續補充</span><span lang="en">Keep adding</span></strong>
+    <span lang="zh-Hant">每次正式環境出事，修好之後把那個案例加進測試集，讓它不會再發生。</span>
+    <span lang="en">Every production incident, once fixed, becomes a test case so it can't recur unnoticed.</span></li>
+</ol>
+
+<h2 id="dataset"><span lang="zh-Hant">測試集長什麼樣子</span><span lang="en">What a test set looks like</span></h2>
+<p lang="zh-Hant">lab 的測試集是一個 JSONL 檔，每行一個案例。注意它包含權限測試（<code>forbidden</code>）與一個<strong>已知會失敗</strong>的案例：誠實的測試集應該反映系統真正的弱點，而不是全部通過。</p>
+<p lang="en">The lab's test set is a JSONL file, one case per line. Note it includes permission tests (<code>forbidden</code>) and a case that is <strong>known to fail</strong>: an honest test set reflects the system's real weaknesses rather than passing everything.</p>
+<figure class="code"><figcaption><span>labs/core/golden_set.jsonl</span><span lang="zh-Hant">（節錄）</span><span lang="en"> (excerpt)</span></figcaption>
+<pre><code class="language-json">{"id": "exact-error-code", "query": "what does PAY-4102 mean", "relevant": ["CLAUSE-006"], "must_include": ["merchant category code"], "tags": ["exact-id"]}
+{"id": "paraphrase-migration", "query": "how do I migrate a big postgres table safely", "relevant": ["CLAUSE-004"], "must_include": ["lock_timeout"], "tags": ["paraphrase"]}
+{"id": "gdpr-forbidden", "query": "personal data leaving the EU", "relevant": [], "forbidden": ["CLAUSE-002", "CLAUSE-009"], "user_groups": [], "tags": ["acl"]}
+{"id": "semantic-oncall", "query": "who is woken up at night", "relevant": ["CLAUSE-010"], "must_include": ["on-call"], "tags": ["synonym"], "note": "Known failure: needs a real embedding model"}</code></pre>
+</figure>
+<ul lang="zh-Hant">
+  <li><strong>來源</strong>：真實流量為主，加上邊界案例與對抗性案例（權限、提示注入）。</li>
+  <li><strong>大小</strong>：從 50 到 100 題開始就有用。重要的是涵蓋各個類別，而不是總數。</li>
+  <li><strong>標準答案由領域專家確認</strong>，不是由模型產生後直接採用。</li>
+  <li><strong>不要讓測試案例流進 prompt</strong>（例如當作 few-shot 範例），否則分數會虛高。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Sources</strong>: mostly real traffic, plus edge cases and adversarial cases (permissions, prompt injection).</li>
+  <li><strong>Size</strong>: 50–100 cases is already useful. Coverage of categories matters more than the total.</li>
+  <li><strong>Reference answers are confirmed by domain experts</strong>, not generated by a model and accepted as-is.</li>
+  <li><strong>Keep test cases out of the prompt</strong> (e.g. as few-shot examples), or scores will be inflated.</li>
+</ul>
+
+<h2 id="graders"><span lang="zh-Hant">評分方式</span><span lang="en">Graders</span></h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">方式</span><span lang="en">Type</span></th><th><span lang="zh-Hant">適合</span><span lang="en">Good for</span></th><th><span lang="zh-Hant">注意</span><span lang="en">Watch out</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">程式評分</span><span lang="en">Code-based</span></td>
+      <td><span lang="zh-Hant">格式、必含字串、引用是否存在、recall@k、權限、數值比對</span><span lang="en">Format, required strings, citation existence, recall@k, permissions, numeric checks</span></td>
+      <td><span lang="zh-Hant">便宜、快、可重現，能用就優先用</span><span lang="en">Cheap, fast, reproducible: prefer it whenever possible</span></td></tr>
+    <tr><td><span lang="zh-Hant">LLM 評審</span><span lang="en">LLM judge</span></td>
+      <td><span lang="zh-Hant">語氣、完整性、答案是否有出處支持等語意判斷</span><span lang="en">Tone, completeness, whether claims are supported: semantic judgments</span></td>
+      <td><span lang="zh-Hant">有偏誤，必須用人工標註校準</span><span lang="en">Biased; must be calibrated against human labels</span></td></tr>
+    <tr><td><span lang="zh-Hant">人工</span><span lang="en">Human</span></td>
+      <td><span lang="zh-Hant">建立標準答案、校準 LLM 評審、抽查高風險案例</span><span lang="en">Creating references, calibrating judges, spot-checking high-risk cases</span></td>
+      <td><span lang="zh-Hant">慢又貴，用在最需要的地方</span><span lang="en">Slow and expensive; spend it where it matters most</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3><span lang="zh-Hant">LLM 評審的偏誤</span><span lang="en">LLM-judge biases</span></h3>
+<ul lang="zh-Hant">
+  <li><strong>位置偏誤</strong>：兩兩比較時偏好第一個或第二個。對策：交換順序各評一次。</li>
+  <li><strong>長度偏誤</strong>：偏好比較長的回答。對策：評分標準明確寫出「長度不是優點」，並檢查分數與長度的相關性。</li>
+  <li><strong>自我偏好</strong>：偏好和自己風格相近的輸出。對策：評審模型與被評模型分開，並用人工標註驗證。</li>
+  <li><strong>模糊的量表</strong>：1 到 10 分很難一致。對策：用「通過／不通過」加上一句理由，比分數更穩定也更好除錯。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Position bias</strong>: in pairwise comparison it favours the first or second answer. Fix: grade both orders.</li>
+  <li><strong>Length bias</strong>: it favours longer answers. Fix: say explicitly in the rubric that length is not a virtue, and check score/length correlation.</li>
+  <li><strong>Self-preference</strong>: it favours outputs in its own style. Fix: separate judge and subject models, and validate against human labels.</li>
+  <li><strong>Vague scales</strong>: 1–10 ratings are hard to keep consistent. Fix: pass/fail plus a one-sentence reason is steadier and easier to debug.</li>
+</ul>
+<div class="callout tip">
+  <span class="label"><span lang="zh-Hant">校準評審</span><span lang="en">Calibrating a judge</span></span>
+  <p lang="zh-Hant">請領域專家標註 50 到 100 筆「通過／不通過」，再讓 LLM 評審評同一批。分別看兩個數字：專家說不通過的，評審抓到多少（漏掉的會讓壞答案溜過）；評審說不通過的，有多少專家也同意（誤判會讓 CI 一直紅燈）。兩者都夠高之前，不要用評審的分數擋合併。</p>
+  <p lang="en">Have domain experts label 50–100 outputs pass/fail, then run the judge on the same set. Look at two numbers: of the outputs experts failed, how many did the judge catch (misses let bad answers through)? Of those the judge failed, how many did experts agree with (false alarms keep CI red)? Don't gate merges on the judge until both are high enough.</p>
+</div>
+
+<h2 id="gate"><span lang="zh-Hant">在 CI 中擋下退步</span><span lang="en">Blocking regressions in CI</span></h2>
+<p lang="zh-Hant">lab 的評測做三件事：逐題評分並列出失敗原因、依標籤彙總、和存檔的 baseline 比較。權限外洩是零容忍，其餘指標則看「有沒有比 baseline 差」。</p>
+<p lang="en">The lab's eval does three things: grades each case and lists failure reasons, aggregates by tag, and compares against a stored baseline. Permission leaks are zero-tolerance; other metrics are judged against the baseline.</p>
+<figure class="code"><figcaption><span>labs/core/evals.py</span></figcaption>
+<pre><code class="language-python">def evaluate_case(case: dict, system: System) -&gt; CaseResult:
+    groups = set(case.get("user_groups", ["everyone"]))
+    hits = system(case["query"], groups)
+    ids = [doc_id for doc_id, _ in hits]
+    relevant = set(case.get("relevant", []))
+    r = CaseResult(case["id"], case.get("tags", []), ids,
+                   recall_at_k(ids, relevant, K) if relevant else None,
+                   reciprocal_rank(ids, relevant) if relevant else None)
+    if r.recall is not None and r.recall &lt; 1.0:
+        r.failures.append(f"missing relevant {sorted(relevant - set(ids[:K]))}")
+    leaked = set(case.get("forbidden", [])) &amp; set(ids)
+    if leaked:
+        r.failures.append(f"returned forbidden docs {sorted(leaked)}")
+    ...
+
+def compare(current: dict, baseline: dict, tolerance: float = TOLERANCE) -&gt; list[str]:
+    problems = []
+    if current["acl_leaks"] &gt; 0:
+        problems.append(f"acl_leaks = {current['acl_leaks']} (must be 0)")
+    for metric in ("pass_rate", f"recall@{K}", "mrr"):
+        if current[metric] &lt; baseline.get(metric, 0) - tolerance:
+            problems.append(f"{metric}: {current[metric]:.3f} &lt; baseline {baseline[metric]:.3f}")
+    return problems</code></pre>
+</figure>
+<figure class="code"><figcaption><span><span lang="zh-Hant">執行結果</span><span lang="en">Output</span></span></figcaption>
+<pre><code>[PASS] exact-error-code       top3=['CLAUSE-006', 'CLAUSE-001', 'CLAUSE-010']
+[PASS] paraphrase-migration   top3=['CLAUSE-004', 'CLAUSE-003', 'CLAUSE-008']
+[PASS] gdpr-forbidden         top3=['CLAUSE-003', 'CLAUSE-008', 'CLAUSE-005']
+[FAIL] semantic-oncall        top3=['CLAUSE-005', 'CLAUSE-003', 'CLAUSE-004'] missing relevant ['CLAUSE-010']; context lacks 'on-call'
+{
+  "cases": 13,
+  "pass_rate": 0.9231,
+  "recall@3": 0.9091,
+  "mrr": 0.9091,
+  "acl_leaks": 0,
+  "pass_rate_by_tag": {"acl": 1.0, "exact-id": 1.0, "keyword": 1.0, "paraphrase": 1.0, "synonym": 0.5}
+}</code></pre>
+</figure>
+<figure class="code"><figcaption><span>.github/workflows/evals.yml</span></figcaption>
+<pre><code class="language-yaml">name: tests-and-evals
+on: [pull_request]
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python -m pytest                # 單元測試：確定性的邏輯
+      - run: python -m labs.core.evals       # 評測：有退步時 exit code = 1</code></pre>
+</figure>
+<div class="callout note">
+  <span class="label"><span lang="zh-Hant">baseline 怎麼更新</span><span lang="en">Updating the baseline</span></span>
+  <p lang="zh-Hant">分數變好時，由人看過結果後執行 <code>--update-baseline</code>，並把 baseline.json 的變更和程式一起提交審查。不要讓 CI 自動更新 baseline，否則退步會被悄悄吸收。</p>
+  <p lang="en">When scores improve, a person reviews the results and runs <code>--update-baseline</code>, committing the baseline.json change for review alongside the code. Never let CI update the baseline automatically, or regressions get quietly absorbed.</p>
+</div>
+
+<h2 id="noise"><span lang="zh-Hant">雜訊：分數掉了 3 分是真的退步嗎？</span><span lang="en">Noise: is a 3-point drop a real regression?</span></h2>
+<p lang="zh-Hant">測試題數有限，模型輸出又有隨機性，分數本來就會跳動。題數少的時候，一題就是好幾個百分點。用下面的模擬感受一下：</p>
+<p lang="en">With a finite number of cases and stochastic model output, scores move on their own. With few cases, one case is several percentage points. Get a feel for it with the simulation below:</p>
+<div class="demo" id="noiseDemo">
+  <div class="demo-head"><span class="tag">demo</span><h3><span lang="zh-Hant">樣本數與雜訊</span><span lang="en">Sample size and noise</span></h3></div>
+  <div class="demo-body">
+    <div class="row" style="font-size:.88rem"><label for="np" style="min-width:9rem"><span lang="zh-Hant">真實通過率</span><span lang="en">True pass rate</span> <strong id="npv"></strong></label><input type="range" id="np" min="60" max="99" value="88" style="flex:1 1 200px"></div>
+    <div class="row" style="font-size:.88rem"><label for="nn" style="min-width:9rem"><span lang="zh-Hant">測試題數</span><span lang="en">Test cases</span> <strong id="nnv"></strong></label><input type="range" id="nn" min="10" max="1000" step="10" value="50" style="flex:1 1 200px"></div>
+    <div class="row" style="font-size:.88rem"><label for="nt" style="min-width:9rem"><span lang="zh-Hant">CI 門檻</span><span lang="en">CI gate</span> <strong id="ntv"></strong></label><input type="range" id="nt" min="60" max="99" value="85" style="flex:1 1 200px"></div>
+    <div class="diagram" style="padding:.4rem;margin:.6rem 0"><svg viewBox="0 0 640 170" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Simulated eval scores"></svg></div>
+    <button class="btn" id="nrun" type="button"><span lang="zh-Hant">重新模擬</span><span lang="en">Resimulate</span></button>
+    <div class="output" aria-live="polite"></div>
+  </div>
+</div>
+<p lang="zh-Hant">實務上的對策：</p>
+<p lang="en">Practical countermeasures:</p>
+<ul lang="zh-Hant">
+  <li><strong>零容忍的項目用程式擋</strong>（權限、格式），不受雜訊影響。</li>
+  <li><strong>題數少時設容忍度</strong>，或改看「哪幾題從通過變失敗」，逐題檢查。</li>
+  <li><strong>輸出有隨機性時，每題跑多次</strong>，看平均或通過比例。</li>
+  <li><strong>重要決策（換模型、上線）用更大的測試集</strong>，例如數百題以上。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Block zero-tolerance items in code</strong> (permissions, format); they are immune to noise.</li>
+  <li><strong>With few cases, allow a tolerance</strong>, or look at which cases flipped from pass to fail and inspect them.</li>
+  <li><strong>For stochastic output, run each case several times</strong> and use the average or pass ratio.</li>
+  <li><strong>Use a larger set for big decisions</strong> (model switch, launch), e.g. several hundred cases.</li>
+</ul>
+
+<h2 id="online"><span lang="zh-Hant">上線後的評測</span><span lang="en">Evaluation after launch</span></h2>
+<p lang="zh-Hant">離線測試集代表的是過去。上線後還需要：</p>
+<p lang="en">An offline test set represents the past. After launch you also need:</p>
+<ul lang="zh-Hant">
+  <li><strong>使用者訊號</strong>：讚／倒讚、重新提問、轉人工、複製答案的比例。</li>
+  <li><strong>抽樣人工審查</strong>：每週隨機抽一批正式環境的對話讓專家評分，追蹤趨勢。</li>
+  <li><strong>線上的程式檢查</strong>：每次回應都跑格式、引用、權限檢查，失敗就告警。</li>
+  <li><strong>把新的失敗加回測試集</strong>，形成迴圈。</li>
+</ul>
+<ul lang="en">
+  <li><strong>User signals</strong>: thumbs up/down, rephrased questions, escalations to a human, copy rate.</li>
+  <li><strong>Sampled human review</strong>: each week experts grade a random sample of production conversations; track the trend.</li>
+  <li><strong>Online code checks</strong>: run format, citation and permission checks on every response and alert on failures.</li>
+  <li><strong>Feed new failures back into the test set</strong>, closing the loop.</li>
+</ul>
+<p lang="zh-Hant">現成的工具（例如 Ragas、DeepEval、promptfoo、LangSmith、Braintrust、Arize Phoenix）可以省下建置追蹤與報表的時間，但這些工具的 API 變動很快。先理解本章的概念，工具只是實作方式。</p>
+<p lang="en">Off-the-shelf tools (Ragas, DeepEval, promptfoo, LangSmith, Braintrust, Arize Phoenix and others) save time on tracing and reporting, but their APIs change quickly. Understand the concepts in this chapter first; the tools are just implementations.</p>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">1. 測試集有 40 題，改動後通過率從 90% 掉到 87.5%。你應該？</span><span lang="en">1. With 40 cases, the pass rate dropped from 90% to 87.5% after a change. You should:</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">確定是退步，立刻回滾。</span><span lang="en">Conclude it regressed and roll back immediately.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">這只差一題。看是哪一題從通過變失敗、原因是什麼，再決定。</span><span lang="en">That's a single case. Find which case flipped and why, then decide.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">忽略，差異很小。</span><span lang="en">Ignore it; the difference is small.</span></span></label>
+    <div class="explain" lang="zh-Hant">40 題時一題是 2.5 分，可能只是雜訊，也可能是一個重要案例真的壞了。逐題檢查比看總分更有資訊。</div>
+    <div class="explain" lang="en">With 40 cases one case is 2.5 points: maybe noise, maybe an important case that genuinely broke. Inspecting the flipped case tells you more than the total.</div>
+  </fieldset>
+  <fieldset data-answer="a">
+    <legend><span lang="zh-Hant">2. 要檢查「回答中引用的文件 ID 都存在於檢索結果中」，最適合用？</span><span lang="en">2. To check that "every cited document ID appears in the retrieval results", the best grader is:</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">程式評分。</span><span lang="en">Code.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">LLM 評審。</span><span lang="en">An LLM judge.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">人工檢查。</span><span lang="en">Human review.</span></span></label>
+    <div class="explain" lang="zh-Hant">這是集合包含關係，用程式判斷最便宜、最準確、可重現。</div>
+    <div class="explain" lang="en">It's a set-membership check: code is cheapest, exact and reproducible.</div>
+  </fieldset>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">3. 建立測試集的第一步最好是？</span><span lang="en">3. The best first step in building a test set?</span></legend>
+    <label><input type="radio" name="q3" value="a"><span><span lang="zh-Hant">請模型產生 500 個問題與答案。</span><span lang="en">Have a model generate 500 questions and answers.</span></span></label>
+    <label><input type="radio" name="q3" value="b"><span><span lang="zh-Hant">安裝評測框架，套用所有內建指標。</span><span lang="en">Install an eval framework and enable all built-in metrics.</span></span></label>
+    <label><input type="radio" name="q3" value="c"><span><span lang="zh-Hant">閱讀真實的輸出，把失敗分類，再針對主要類別寫案例。</span><span lang="en">Read real outputs, categorise the failures, then write cases for the main categories.</span></span></label>
+    <div class="explain" lang="zh-Hant">合成資料和現成指標可以輔助，但只有從真實失敗出發，測試集才會反映使用者真正遇到的問題。</div>
+    <div class="explain" lang="en">Synthetic data and stock metrics can help, but only a set grounded in real failures reflects the problems users actually hit.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

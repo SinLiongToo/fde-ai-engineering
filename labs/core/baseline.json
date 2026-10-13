@@ -1,0 +1,14 @@
+{
+  "cases": 13,
+  "pass_rate": 0.9231,
+  "recall@3": 0.9091,
+  "mrr": 0.9091,
+  "acl_leaks": 0,
+  "pass_rate_by_tag": {
+    "acl": 1.0,
+    "exact-id": 1.0,
+    "keyword": 1.0,
+    "paraphrase": 1.0,
+    "synonym": 0.5
+  }
+}

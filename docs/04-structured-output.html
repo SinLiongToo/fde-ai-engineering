@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="04-structured-output"
+  data-title-zh="04 結構化輸出與資料契約 · AI 工程實戰課"
+  data-title-en="04 Structured output and contracts · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 結構化輸出與資料契約 · AI 工程實戰課</title>
+<meta name="description" content="把模型輸出當成不可信的外部輸入：structured output 負責結構、Pydantic 負責規則、修復迴圈負責重試，以及 schema 擋不住的錯誤。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/demos/validator.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">第 4 章</span><span lang="en">Chapter 4</span></div>
+<h1><span lang="zh-Hant">結構化輸出與資料契約</span><span lang="en">Structured output and contracts</span></h1>
+<p class="lede" lang="zh-Hant">只要模型的輸出會被程式讀取，它就是一個 API。這個 API 的另一端是一個機率模型，所以你要用對待外部輸入的方式對待它：先驗證，再使用。</p>
+<p class="lede" lang="en">As soon as code reads a model's output, that output is an API, and the other side of that API is a probabilistic model. Treat it the way you treat external input: validate first, then use.</p>
+<div class="meta"><span>⏱ 25 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>labs/core/contracts.py</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">讀完這章你能夠</span><span lang="en">After this chapter you can</span></h2>
+  <ul lang="zh-Hant">
+    <li>分辨四種輸出錯誤，並知道每一種該由哪一層擋下。</li>
+    <li>用 provider 的 structured output 確保結構，用 Pydantic 確保業務規則。</li>
+    <li>實作有上限、有紀錄的驗證修復迴圈。</li>
+    <li>說明 schema 驗證<strong>擋不住</strong>什麼，以及要靠什麼補上。</li>
+  </ul>
+  <ul lang="en">
+    <li>Tell apart four kinds of output error and which layer should stop each one.</li>
+    <li>Use provider structured output for structure and Pydantic for business rules.</li>
+    <li>Implement a bounded, logged validate-and-repair loop.</li>
+    <li>Explain what schema validation <strong>cannot</strong> catch and what covers the gap.</li>
+  </ul>
+</section>
+
+<h2 id="failures"><span lang="zh-Hant">四種輸出錯誤</span><span lang="en">Four kinds of output error</span></h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">錯誤</span><span lang="en">Error</span></th><th><span lang="zh-Hant">例子</span><span lang="en">Example</span></th><th><span lang="zh-Hant">由誰擋下</span><span lang="en">Stopped by</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">不是合法 JSON</span><span lang="en">Not valid JSON</span></td>
+      <td><span lang="zh-Hant">外面包了 <code>```json</code>、輸出被截斷</span><span lang="en">Wrapped in <code>```json</code>, truncated output</span></td>
+      <td><span lang="zh-Hant">structured output（受限解碼）</span><span lang="en">Structured output (constrained decoding)</span></td></tr>
+    <tr><td><span lang="zh-Hant">結構不對</span><span lang="en">Wrong shape</span></td>
+      <td><span lang="zh-Hant">少了欄位、型別錯、enum 外的值</span><span lang="en">Missing field, wrong type, value outside the enum</span></td>
+      <td><span lang="zh-Hant">structured output + schema 驗證</span><span lang="en">Structured output + schema validation</span></td></tr>
+    <tr><td><span lang="zh-Hant">結構對，值不合規則</span><span lang="en">Right shape, rule-breaking values</span></td>
+      <td><span lang="zh-Hant">ID 格式錯、修復建議寫「TBD」、引用了沒檢索到的文件</span><span lang="en">Bad ID format, "TBD" as the fix, citing a document that wasn't retrieved</span></td>
+      <td><span lang="zh-Hant">你的程式（Pydantic validator）</span><span lang="en">Your code (Pydantic validators)</span></td></tr>
+    <tr><td><span lang="zh-Hant">完全合規，但內容是錯的</span><span lang="en">Fully valid, factually wrong</span></td>
+      <td><span lang="zh-Hant">風險等級判斷錯、理由不成立</span><span lang="en">Wrong risk level, reasoning that doesn't hold</span></td>
+      <td><span lang="zh-Hant">評測（第 7 章）與人工審核</span><span lang="en">Evaluation (chapter 7) and human review</span></td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout warn">
+  <span class="label"><span lang="zh-Hant">常見誤解</span><span lang="en">Common misconception</span></span>
+  <p lang="zh-Hant">「用了 structured output，輸出就保證正確。」它保證的是<strong>形狀</strong>，不是<strong>內容</strong>。一個欄位齊全、型別正確、但結論錯誤的 JSON，比一個解析失敗的 JSON 更危險，因為它會安靜地流進下游。</p>
+  <p lang="en">"With structured output, the output is guaranteed correct." It guarantees <strong>shape</strong>, not <strong>content</strong>. A JSON object with every field present and typed correctly but a wrong conclusion is more dangerous than one that fails to parse, because it flows silently downstream.</p>
+</div>
+
+<h2 id="layers"><span lang="zh-Hant">分層防護</span><span lang="en">Defense in layers</span></h2>
+<div class="diagram" role="img" aria-label="Model output passes through structured output, schema validation, business rules, and a repair loop before reaching downstream code; failures after N attempts go to a human queue">
+  <svg viewBox="0 0 740 210" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="ah4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+    <rect class="box" x="10" y="50" width="100" height="56" rx="8"/><text x="60" y="83" text-anchor="middle">LLM</text>
+    <rect class="box accent" x="140" y="50" width="130" height="56" rx="8"/>
+    <text x="205" y="75" text-anchor="middle" font-weight="700">Structured output</text>
+    <text x="205" y="94" text-anchor="middle" class="muted"><tspan lang="zh-Hant">型別、enum、必填</tspan><tspan lang="en">types, enum, required</tspan></text>
+    <rect class="box accent" x="300" y="50" width="130" height="56" rx="8"/>
+    <text x="365" y="75" text-anchor="middle" font-weight="700">Pydantic</text>
+    <text x="365" y="94" text-anchor="middle" class="muted"><tspan lang="zh-Hant">範圍、格式、規則</tspan><tspan lang="en">ranges, lengths, rules</tspan></text>
+    <rect class="box" x="460" y="50" width="120" height="56" rx="8"/>
+    <text x="520" y="83" text-anchor="middle"><tspan lang="zh-Hant">下游程式</tspan><tspan lang="en">Downstream</tspan></text>
+    <rect class="box warn" x="610" y="130" width="120" height="56" rx="8"/>
+    <text x="670" y="155" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">人工佇列</tspan><tspan lang="en">Human queue</tspan></text>
+    <text x="670" y="174" text-anchor="middle" class="muted"><tspan lang="zh-Hant">重試 N 次仍失敗</tspan><tspan lang="en">after N failures</tspan></text>
+    <path class="edge" d="M110 78 L138 78" marker-end="url(#ah4)"/>
+    <path class="edge" d="M270 78 L298 78" marker-end="url(#ah4)"/>
+    <path class="edge accent" d="M430 78 L458 78" marker-end="url(#ah4)"/>
+    <path class="edge dashed" d="M365 106 C 365 160, 60 160, 60 108" marker-end="url(#ah4)"/>
+    <text x="210" y="168" text-anchor="middle" class="muted"><tspan lang="zh-Hant">驗證錯誤回饋給模型重試</tspan><tspan lang="en">validation errors fed back for a retry</tspan></text>
+    <path class="edge dashed" d="M430 100 C 520 150, 560 158, 608 158" marker-end="url(#ah4)"/>
+  </svg>
+</div>
+
+<h3><span lang="zh-Hant">第 1 層：provider 的 structured output</span><span lang="en">Layer 1: provider structured output</span></h3>
+<p lang="zh-Hant">主流 API 都提供某種形式的 structured output：你給一份 JSON Schema，模型在產生 token 時就被限制在符合 schema 的範圍內，所以不會再出現「多了一段說明文字」或「括號沒關」的情況。不過各家支援的 schema 關鍵字不同。以 Claude 為例，型別、<code>enum</code>、<code>required</code> 會被強制執行，但數值範圍（<code>minimum</code>/<code>maximum</code>）與字串長度（<code>minLength</code>）<strong>不在解碼時強制</strong>；官方 SDK 會把這些限制從送出的 schema 移除，改在本機驗證。</p>
+<p lang="en">Major APIs offer some form of structured output: you supply a JSON Schema and token generation is constrained to it, so "an extra sentence of explanation" or "an unclosed brace" can no longer happen. Supported schema keywords differ by provider, though. On Claude, for example, types, <code>enum</code> and <code>required</code> are enforced, while numeric ranges (<code>minimum</code>/<code>maximum</code>) and string lengths (<code>minLength</code>) are <strong>not enforced during decoding</strong>; the official SDKs strip them from the schema sent to the API and validate them locally.</p>
+<p lang="zh-Hant">結論：<strong>不管用哪家 provider，本機的 Pydantic 驗證都不能省</strong>。</p>
+<p lang="en">Conclusion: <strong>whatever the provider, local Pydantic validation is not optional</strong>.</p>
+
+<h3><span lang="zh-Hant">第 2、3 層：Pydantic 型別與業務規則</span><span lang="en">Layers 2–3: Pydantic types and business rules</span></h3>
+<p lang="zh-Hant">下面是 lab 裡的契約。注意最後一個 validator：它用<strong>這次請求實際檢索到的文件</strong>來檢查引用，這是抓捏造出處最有效的方法之一，而且 schema 本身做不到。</p>
+<p lang="en">Below is the contract from the lab. Note the last validator: it checks citations against <strong>the documents actually retrieved for this request</strong>, one of the most effective ways to catch fabricated sources, and something a schema alone cannot express.</p>
+<figure class="code"><figcaption><span>labs/core/contracts.py</span></figcaption>
+<pre><code class="language-python">PLACEHOLDER_PATTERN = re.compile(
+    r"\b(tbd|todo|fixme|n/a|contact (the )?admin|check later|look at (the )?logs)\b",
+    re.IGNORECASE,
+)
+
+class ClauseRiskAssessment(BaseModel):
+    clause_id: str = Field(pattern=r"^CLAUSE-\d{3,4}$")
+    title: str = Field(min_length=3, max_length=120)
+    risk_level: Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+    # 模型自報的 confidence 沒有校準，只能當參考 / self-reported, not calibrated
+    confidence: float = Field(ge=0.0, le=1.0)
+    findings: list[str] = Field(min_length=1)
+    mitigation: str = Field(min_length=25)
+    cited_clause_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("mitigation")
+    @classmethod
+    def mitigation_is_concrete(cls, v: str) -&gt; str:
+        match = PLACEHOLDER_PATTERN.search(v)
+        if match:
+            raise ValueError(f"mitigation contains placeholder text '{match.group(0)}'; "
+                             "give a concrete, actionable step")
+        return v
+
+    @field_validator("cited_clause_ids")
+    @classmethod
+    def citations_were_retrieved(cls, v: list[str], info: ValidationInfo) -&gt; list[str]:
+        allowed = (info.context or {}).get("retrieved_ids")
+        if allowed is not None:
+            unknown = [c for c in v if c not in allowed]
+            if unknown:
+                raise ValueError(f"cites clauses that were not retrieved: {', '.join(unknown)}")
+        return v
+
+# 使用時傳入 context / pass the context at validation time
+ClauseRiskAssessment.model_validate_json(raw, context={"retrieved_ids": {"CLAUSE-003", "CLAUSE-004"}})</code></pre>
+</figure>
+<div class="callout tip">
+  <span class="label"><span lang="zh-Hant">為什麼用「整個詞」比對</span><span lang="en">Why whole-word matching</span></span>
+  <p lang="zh-Hant">舊版用子字串比對 <code>"todo" in text</code>，會把「更新 todos 資料表」也擋掉。<code>\b</code> 讓規則只比對完整的詞。驗證規則和任何程式碼一樣需要測試，lab 裡有專門的測試案例。</p>
+  <p lang="en">A substring check like <code>"todo" in text</code> also rejects "update the todos table". <code>\b</code> limits the rule to whole words. Validation rules need tests like any other code; the lab includes cases for this.</p>
+</div>
+
+<h3><span lang="zh-Hant">第 4 層：修復迴圈</span><span lang="en">Layer 4: the repair loop</span></h3>
+<p lang="zh-Hant">驗證失敗時，把具體的錯誤訊息當成下一輪的使用者訊息回給模型。三個要點：<strong>次數有上限</strong>、<strong>每次嘗試都記錄</strong>（之後分析失敗模式用）、<strong>最後失敗時有去處</strong>（人工佇列或明確的錯誤），而不是回傳一個預設值。</p>
+<p lang="en">When validation fails, send the specific error messages back to the model as the next user turn. Three essentials: <strong>a cap on attempts</strong>, <strong>a log entry per attempt</strong> (for analysing failure patterns later), and <strong>somewhere for final failures to go</strong> (a human queue or an explicit error) rather than a silent default.</p>
+<figure class="code"><figcaption><span>labs/core/contracts.py</span></figcaption>
+<pre><code class="language-python">def generate_validated(llm, prompt, model_cls=ClauseRiskAssessment, max_attempts=3, context=None):
+    messages = [{"role": "user", "content": prompt}]
+    attempts = []
+    for attempt in range(1, max_attempts + 1):
+        raw = llm(messages)
+        try:
+            obj = model_cls.model_validate_json(raw, context=context)
+        except ValidationError as err:
+            attempts.append({"attempt": attempt, "ok": False,
+                             "errors": err.errors(include_url=False, include_context=False)})
+            messages += [
+                {"role": "assistant", "content": raw},
+                {"role": "user", "content": format_errors_for_model(err) + "\nReturn corrected JSON only."},
+            ]
+            continue
+        attempts.append({"attempt": attempt, "ok": True})
+        return obj, attempts
+    raise RepairExhausted(attempts)</code></pre>
+</figure>
+
+<h3><span lang="zh-Hant">接上真正的模型</span><span lang="en">Plugging in a real model</span></h3>
+<p lang="zh-Hant"><code>llm</code> 只是一個「訊息進、文字出」的函式，所以換 provider 不影響驗證邏輯。下面是用 Anthropic Python SDK 的寫法。送給 API 的 schema 只放它會強制的關鍵字；其餘規則由上面的 Pydantic 模型負責。</p>
+<p lang="en"><code>llm</code> is just a messages-in, text-out function, so switching providers doesn't touch the validation logic. Here is the Anthropic Python SDK version. The schema sent to the API contains only keywords it enforces; the Pydantic model above handles every other rule.</p>
+<figure class="code"><figcaption><span>example_claude.py</span></figcaption>
+<pre><code class="language-python">import anthropic
+from labs.core.contracts import generate_validated
+
+client = anthropic.Anthropic()  # 讀取 ANTHROPIC_API_KEY
+
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "clause_id": {"type": "string"},
+        "title": {"type": "string"},
+        "risk_level": {"type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"]},
+        "confidence": {"type": "number"},
+        "findings": {"type": "array", "items": {"type": "string"}},
+        "mitigation": {"type": "string"},
+        "cited_clause_ids": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["clause_id", "title", "risk_level", "confidence",
+                 "findings", "mitigation", "cited_clause_ids"],
+    "additionalProperties": False,
+}
+
+def claude(messages: list[dict]) -&gt; str:
+    response = client.messages.create(
+        model="claude-opus-5-5",
+        max_tokens=16000,
+        system="You assess contract clauses for operational risk. "
+               "Cite only clause ids that appear in the provided context.",
+        messages=messages,
+        output_config={"format": {"type": "json_schema", "schema": OUTPUT_SCHEMA}},
+    )
+    # refusal 或 max_tokens 時，輸出不一定符合 schema
+    if response.stop_reason in ("refusal", "max_tokens"):
+        raise RuntimeError(f"unusable response: {response.stop_reason}")
+    return next(b.text for b in response.content if b.type == "text")
+
+retrieved = {"CLAUSE-003": "...", "CLAUSE-004": "..."}
+prompt = "&lt;context&gt;\n" + "\n".join(f"[{k}] {v}" for k, v in retrieved.items()) + \
+         "\n&lt;/context&gt;\nAssess CLAUSE-004 against the attached migration script."
+assessment, attempts = generate_validated(claude, prompt, context={"retrieved_ids": set(retrieved)})</code></pre>
+</figure>
+<div class="callout note">
+  <span class="label"><span lang="zh-Hant">補充</span><span lang="en">Note</span></span>
+  <p lang="zh-Hant">如果不需要自訂修復迴圈，Anthropic SDK 也提供 <code>client.messages.parse(output_format=YourModel)</code>，會自動轉換 schema 並在本機驗證，回傳 <code>response.parsed_output</code>。另外，舊教學常見「強制 tool_choice 來取得 JSON」的寫法；目前較新的模型（例如 <code>claude-opus-5-5</code>）不支援強制 <code>tool_choice</code>，應改用 structured output。</p>
+  <p lang="en">If you don't need a custom repair loop, the Anthropic SDK also offers <code>client.messages.parse(output_format=YourModel)</code>, which converts the schema, validates locally and returns <code>response.parsed_output</code>. Older tutorials often force <code>tool_choice</code> to get JSON; newer models such as <code>claude-opus-5-5</code> reject forced <code>tool_choice</code>, so use structured output instead.</p>
+</div>
+
+<h2 id="demo"><span lang="zh-Hant">動手試：驗證器</span><span lang="en">Try it: the validator</span></h2>
+<div class="demo" id="validatorDemo">
+  <div class="demo-head"><span class="tag">demo</span><h3><span lang="zh-Hant">ClauseRiskAssessment 驗證</span><span lang="en">ClauseRiskAssessment validation</span></h3></div>
+  <div class="demo-body">
+    <p class="hint" lang="zh-Hant">和 Python lab 相同的規則（JS 版）。選一個情境，或直接編輯 JSON。注意「捏造引用」這個情境：只有開啟右邊的選項，用檢索結果當 context 時才抓得到。</p>
+    <p class="hint" lang="en">The same rules as the Python lab, in JS. Pick a scenario or edit the JSON. Note the "fabricated citation" case: it is only caught when the option on the right uses the retrieval results as context.</p>
+    <div class="row">
+      <button class="chip" data-preset="valid" aria-pressed="true"><span lang="zh-Hant">正確</span><span lang="en">Valid</span></button>
+      <button class="chip" data-preset="lazy"><span lang="zh-Hant">敷衍的修復建議</span><span lang="en">Lazy mitigation</span></button>
+      <button class="chip" data-preset="badid"><span lang="zh-Hant">ID 與數值錯誤</span><span lang="en">Bad ID and range</span></button>
+      <button class="chip" data-preset="missing"><span lang="zh-Hant">空清單與非法 enum</span><span lang="en">Empty list, bad enum</span></button>
+      <button class="chip" data-preset="hallucinated"><span lang="zh-Hant">捏造引用</span><span lang="en">Fabricated citation</span></button>
+      <button class="chip" data-preset="fenced"><span lang="zh-Hant">包在 markdown 裡</span><span lang="en">Markdown-fenced</span></button>
+    </div>
+    <textarea spellcheck="false" aria-label="JSON input"></textarea>
+    <div class="row">
+      <button class="btn primary" id="runValidate" type="button"><span lang="zh-Hant">驗證</span><span lang="en">Validate</span></button>
+      <label style="display:flex;gap:.4rem;align-items:center;font-size:.9rem"><input type="checkbox" id="checkCitations" checked>
+        <span><span lang="zh-Hant">以檢索結果 {CLAUSE-003, CLAUSE-004} 檢查引用</span><span lang="en">Check citations against retrieved {CLAUSE-003, CLAUSE-004}</span></span></label>
+    </div>
+    <div class="output" aria-live="polite"></div>
+  </div>
+</div>
+
+<h2 id="design"><span lang="zh-Hant">設計 schema 的建議</span><span lang="en">Schema design tips</span></h2>
+<ul lang="zh-Hant">
+  <li><strong>能用 enum 就不要用自由文字。</strong>下游的 <code>if</code> 判斷需要固定的值。</li>
+  <li><strong>允許「不知道」。</strong>如果資料不足，給模型一個明確的出口（例如 <code>"risk_level": "UNKNOWN"</code> 或可為 null 的欄位），否則它會被迫猜一個答案。</li>
+  <li><strong>欄位描述寫給模型看。</strong>schema 的 description 會影響輸出品質，寫清楚格式與例子。</li>
+  <li><strong>不要把 confidence 當機率。</strong>模型自報的信心分數通常沒有校準。如果需要可靠的信心，用評測資料去校準，或用其他訊號（檢索分數、多次取樣的一致性）。</li>
+  <li><strong>版本化。</strong>schema 改了，下游的解析程式、測試集與儲存的資料都會受影響，當成 API 版本管理。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Prefer enums to free text.</strong> Downstream <code>if</code> statements need fixed values.</li>
+  <li><strong>Allow "don't know".</strong> When information is missing, give the model an explicit exit (e.g. <code>"risk_level": "UNKNOWN"</code> or a nullable field), or it will be forced to guess.</li>
+  <li><strong>Write field descriptions for the model.</strong> Schema descriptions affect output quality; state formats and give examples.</li>
+  <li><strong>Don't treat confidence as probability.</strong> Self-reported confidence is usually uncalibrated. If you need reliable confidence, calibrate against eval data or use other signals (retrieval scores, agreement across samples).</li>
+  <li><strong>Version it.</strong> A schema change affects downstream parsers, test sets and stored data; manage it like an API version.</li>
+</ul>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">1. 已經使用 provider 的 structured output，為什麼還需要 Pydantic 驗證？</span><span lang="en">1. You already use provider structured output. Why still validate with Pydantic?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">不需要，structured output 已經保證正確。</span><span lang="en">You don't; structured output guarantees correctness.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">只是為了取得 Python 物件，方便使用。</span><span lang="en">Only to get a convenient Python object.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">有些限制不在解碼時強制，業務規則與跨欄位檢查也只能在自己的程式裡做。</span><span lang="en">Some constraints aren't enforced during decoding, and business rules and cross-field checks can only live in your code.</span></span></label>
+    <div class="explain" lang="zh-Hant">structured output 保證結構，不保證範圍、長度、格式規則，更不會知道「這次檢索到哪些文件」。</div>
+    <div class="explain" lang="en">Structured output guarantees structure, not ranges, lengths or format rules, and it certainly doesn't know which documents were retrieved this time.</div>
+  </fieldset>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">2. 修復迴圈重試 3 次都失敗，最好的處理是？</span><span lang="en">2. The repair loop fails three times. Best handling?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">回傳一個預設的「LOW 風險」結果，讓流程繼續。</span><span lang="en">Return a default "LOW risk" result so the flow continues.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">拋出明確的錯誤或送進人工佇列，並保留每次嘗試的紀錄。</span><span lang="en">Raise an explicit error or route to a human queue, keeping the log of every attempt.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">無限重試直到成功。</span><span lang="en">Retry until it succeeds.</span></span></label>
+    <div class="explain" lang="zh-Hant">預設值會把失敗偽裝成正常結果，風險評估尤其危險。無限重試會讓成本與延遲失控。</div>
+    <div class="explain" lang="en">A default disguises failure as a normal result, especially dangerous for risk assessment. Unbounded retries let cost and latency run away.</div>
+  </fieldset>
+  <fieldset data-answer="a">
+    <legend><span lang="zh-Hant">3. 模型回傳的 JSON 完全通過驗證，但風險等級判斷錯了。這要靠什麼發現？</span><span lang="en">3. The JSON passes every validation, but the risk level is wrong. What catches this?</span></legend>
+    <label><input type="radio" name="q3" value="a"><span><span lang="zh-Hant">有標準答案的評測集，以及高風險案例的人工審核。</span><span lang="en">An eval set with reference answers, plus human review of high-risk cases.</span></span></label>
+    <label><input type="radio" name="q3" value="b"><span><span lang="zh-Hant">更嚴格的 JSON Schema。</span><span lang="en">A stricter JSON Schema.</span></span></label>
+    <label><input type="radio" name="q3" value="c"><span><span lang="zh-Hant">把 temperature 設為 0。</span><span lang="en">Setting temperature to 0.</span></span></label>
+    <div class="explain" lang="zh-Hant">內容是否正確屬於語意問題，schema 無從判斷。temperature 只影響輸出的變異程度，不保證正確。</div>
+    <div class="explain" lang="en">Whether content is correct is a semantic question a schema can't answer. Temperature affects variability, not correctness.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# 必要 / required
+pydantic>=2.6
+pytest>=8
+rich>=13            # code_reviewer CLI 的終端輸出
+
+# 選用 / optional
+# google-genai>=1.0   # code_reviewer 的 LLM 補充（需 GEMINI_API_KEY）

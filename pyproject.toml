@@ -1,0 +1,14 @@
+[project]
+name = "fde-ai-engineering-course"
+version = "2.0.0"
+description = "Labs for the AI Engineering for Forward Deployed Engineers course"
+requires-python = ">=3.10"
+dependencies = ["pydantic>=2.6", "rich>=13"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+llm = ["google-genai>=1.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["labs"]
+addopts = "-q"

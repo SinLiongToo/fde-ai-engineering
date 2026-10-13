@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="09-labs"
+  data-title-zh="09 實作練習與延伸資源 · AI 工程實戰課"
+  data-title-en="09 Labs and further reading · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>09 實作練習與延伸資源 · AI 工程實戰課</title>
+<meta name="description" content="三個可離線執行的 Python 練習：核心模式、AI code reviewer、MCP SRE 服務。附延伸作業與值得閱讀的參考資料。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">第 9 章</span><span lang="en">Chapter 9</span></div>
+<h1><span lang="zh-Hant">實作練習與延伸資源</span><span lang="en">Labs and further reading</span></h1>
+<p class="lede" lang="zh-Hant">三個練習都放在 <code>labs/</code>，只需要 Python 與兩個套件，完全離線、不需要 API key。每個練習都有測試，改完程式碼跑一次就知道有沒有弄壞東西。</p>
+<p class="lede" lang="en">All three labs live in <code>labs/</code> and need only Python plus two packages. They run fully offline with no API key. Every lab has tests, so one run tells you whether a change broke something.</p>
+<div class="meta"><span>⏱ 15 <span lang="zh-Hant">分鐘閱讀，練習另計</span><span lang="en">min to read, plus lab time</span></span></div>
+
+<h2 id="setup"><span lang="zh-Hant">安裝</span><span lang="en">Setup</span></h2>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash"># Python 3.10 以上 / Python 3.10+
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+python -m pytest                   # 58 passed</code></pre>
+</figure>
+
+<h2 id="lab-core"><span lang="zh-Hant">練習 1：核心模式</span><span lang="en">Lab 1: core patterns</span></h2>
+<p lang="zh-Hant">對應第 4 到 7 章。每個模組都可以單獨執行，看看它在做什麼。</p>
+<p lang="en">Covers chapters 4–7. Each module runs on its own so you can see what it does.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">檔案</span><span lang="en">File</span></th><th><span lang="zh-Hant">內容</span><span lang="en">Contents</span></th><th><span lang="zh-Hant">執行</span><span lang="en">Run</span></th></tr></thead>
+  <tbody>
+    <tr><td><code>contracts.py</code></td><td><span lang="zh-Hant">Pydantic 契約、引用檢查、修復迴圈（第 4 章）</span><span lang="en">Pydantic contract, citation check, repair loop (ch. 4)</span></td><td><code>python -m labs.core.contracts</code></td></tr>
+    <tr><td><code>retrieval.py</code></td><td><span lang="zh-Hant">BM25、3-gram 向量、RRF、權限過濾、指標（第 5 章）</span><span lang="en">BM25, 3-gram vectors, RRF, ACL filter, metrics (ch. 5)</span></td><td><code>python -m labs.core.retrieval</code></td></tr>
+    <tr><td><code>agent.py</code></td><td><span lang="zh-Hant">狀態機、checkpoint、中斷與核准、唯讀連線（第 6 章）</span><span lang="en">State machine, checkpoints, interrupt and approval, read-only connection (ch. 6)</span></td><td><code>python -m labs.core.agent</code></td></tr>
+    <tr><td><code>evals.py</code></td><td><span lang="zh-Hant">測試集、程式評分、baseline 比較（第 7 章）</span><span lang="en">Test set, code graders, baseline gate (ch. 7)</span></td><td><code>python -m labs.core.evals</code></td></tr>
+  </tbody>
+</table>
+</div>
+<h3><span lang="zh-Hant">延伸作業</span><span lang="en">Extension exercises</span></h3>
+<ol lang="zh-Hant">
+  <li><strong>允許「不知道」</strong>：在 <code>risk_level</code> 加入 <code>UNKNOWN</code>，並規定此時 <code>findings</code> 必須說明缺少什麼資訊。寫測試。</li>
+  <li><strong>接上真正的 embedding 模型</strong>：實作 <code>Embedder</code> 介面（例如用 sentence-transformers 或任一 embedding API），傳給 <code>HybridRetriever</code>。重跑評測：<code>semantic-oncall</code> 應該會通過。確認沒有其他案例退步後，更新 baseline。</li>
+  <li><strong>核准期限</strong>：在 <code>Agent.resume</code> 加入檢查，等待超過指定時間的核准一律拒絕，並寫測試。</li>
+  <li><strong>你自己的測試集</strong>：把語料換成你工作領域的 10 份文件，寫 15 題測試案例，其中至少 3 題是權限案例、1 題是已知會失敗的案例。</li>
+</ol>
+<ol lang="en">
+  <li><strong>Allow "don't know"</strong>: add <code>UNKNOWN</code> to <code>risk_level</code>, and require <code>findings</code> to state what information is missing in that case. Write tests.</li>
+  <li><strong>Plug in a real embedding model</strong>: implement the <code>Embedder</code> protocol (e.g. with sentence-transformers or any embedding API) and pass it to <code>HybridRetriever</code>. Re-run the evals: <code>semantic-oncall</code> should now pass. Once nothing else regressed, update the baseline.</li>
+  <li><strong>Approval expiry</strong>: make <code>Agent.resume</code> reject approvals that arrive after a configurable delay, with tests.</li>
+  <li><strong>Your own test set</strong>: replace the corpus with 10 documents from your domain and write 15 test cases, including at least 3 permission cases and 1 known failure.</li>
+</ol>
+
+<h2 id="lab-reviewer"><span lang="zh-Hant">練習 2：AI code reviewer</span><span lang="en">Lab 2: AI code reviewer</span></h2>
+<p lang="zh-Hant">對應第 3、4 章。用 Python 的 <code>ast</code> 模組做確定性的靜態檢查（SQL injection、寫死的金鑰、缺少逾時、<code>eval</code>、在程式中 DROP TABLE），可以選擇加上 LLM 補充語意問題。重點在設計：<strong>LLM 只提出發現，分數與結論由程式計算</strong>；LLM 回報的行號不存在就丟棄。</p>
+<p lang="en">Covers chapters 3 and 4. Deterministic static checks with Python's <code>ast</code> module (SQL injection, hard-coded secrets, missing timeouts, <code>eval</code>, DROP TABLE in app code), with an optional LLM pass for semantic issues. The point is the design: <strong>the LLM only proposes findings; score and verdict are computed in code</strong>, and findings on non-existent lines are dropped.</p>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash">python -m labs.code_reviewer.cli                                    # 預設檢查 samples/vulnerable_api.py
+python -m labs.code_reviewer.cli labs/code_reviewer/samples/clean_api.py
+python -m labs.code_reviewer.cli path/to/your_file.py --rules team_rules.md
+
+# 選用：加上 LLM 補充（需要 pip install google-genai）
+export GEMINI_API_KEY=...</code></pre>
+</figure>
+<h3><span lang="zh-Hant">延伸作業</span><span lang="en">Extension exercises</span></h3>
+<ol lang="zh-Hant">
+  <li>新增規則：偵測 <code>subprocess.run(..., shell=True)</code> 搭配非常數參數。先寫測試，包含「常數字串不應該被報告」的案例。</li>
+  <li>在你自己的程式庫上執行，記錄誤報，然後修正規則並把誤報寫成測試。</li>
+  <li>把 LLM 補充改成使用你偏好的 provider（例如第 4 章的 Claude 寫法），保持 <code>validate_llm_issues</code> 與 <code>merge_issues</code> 不變。</li>
+</ol>
+<ol lang="en">
+  <li>Add a rule detecting <code>subprocess.run(..., shell=True)</code> with non-constant arguments. Write tests first, including "constant strings are not reported".</li>
+  <li>Run it on your own codebase, record the false positives, then fix the rules and turn each false positive into a test.</li>
+  <li>Switch the LLM pass to your preferred provider (e.g. the Claude pattern from chapter 4), leaving <code>validate_llm_issues</code> and <code>merge_issues</code> unchanged.</li>
+</ol>
+
+<h2 id="lab-mcp"><span lang="zh-Hant">練習 3：MCP SRE 服務</span><span lang="en">Lab 3: MCP SRE service</span></h2>
+<p lang="zh-Hant">對應第 5、6、8 章。一個最小的 MCP server（stdio）與 client，加上一個「診斷 → 查 runbook → 提出修改 → 人工核准 → 執行 → 驗證」的 workflow。雲端環境是模擬的（<code>cloud_sim.py</code>），不會呼叫任何真正的 GCP API。</p>
+<p lang="en">Covers chapters 5, 6 and 8. A minimal MCP server (stdio) and client, plus a "diagnose → search runbooks → propose change → human approval → apply → verify" workflow. The cloud is simulated (<code>cloud_sim.py</code>); no real GCP API is called.</p>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash">python -m labs.mcp_sre.cli                 # 診斷 payment-gateway，修改前會詢問 y/N
+python -m labs.mcp_sre.cli --stdio         # 以子行程啟動 server，走真正的 stdio
+python -m labs.mcp_sre.server              # 單獨啟動 server，從 stdin 讀 JSON-RPC</code></pre>
+</figure>
+<div class="callout note">
+  <span class="label"><span lang="zh-Hant">範圍說明</span><span lang="en">Scope</span></span>
+  <p lang="zh-Hant">這個 server 只實作 MCP 的一小部分（initialize、tools/list、tools/call、ping），目的是讓你看懂協定本身。正式專案請使用官方的 MCP SDK，它會處理完整的協定、傳輸與相容性。</p>
+  <p lang="en">This server implements only a small part of MCP (initialize, tools/list, tools/call, ping) so you can see the protocol itself. For real projects use an official MCP SDK, which handles the full protocol, transports and compatibility.</p>
+</div>
+<h3><span lang="zh-Hant">延伸作業</span><span lang="en">Extension exercises</span></h3>
+<ol lang="zh-Hant">
+  <li>新增唯讀工具 <code>get_recent_deploys(name)</code>，讓診斷流程在修改擴容設定前，先檢查是不是最近的部署造成的。</li>
+  <li>新增一筆「修改後狀態沒有改善」的模擬情境，讓 workflow 回報失敗並建議回滾。</li>
+  <li>把 server 改用官方 MCP Python SDK 實作，保留相同的工具與 annotations，讓現有測試繼續通過。</li>
+</ol>
+<ol lang="en">
+  <li>Add a read-only tool <code>get_recent_deploys(name)</code> so the diagnosis checks for a recent deploy before touching scaling.</li>
+  <li>Add a simulated scenario where the change doesn't help, and make the workflow report failure and recommend rollback.</li>
+  <li>Re-implement the server with the official MCP Python SDK, keeping the same tools and annotations, so the existing tests still pass.</li>
+</ol>
+
+<h2 id="reading"><span lang="zh-Hant">延伸閱讀</span><span lang="en">Further reading</span></h2>
+<div class="table-wrap">
+<table class="plain">
+  <thead><tr><th><span lang="zh-Hant">資料</span><span lang="en">Resource</span></th><th><span lang="zh-Hant">對應章節與重點</span><span lang="en">Chapters and why</span></th></tr></thead>
+  <tbody>
+    <tr><td><a href="https://www.anthropic.com/engineering/building-effective-agents" rel="noopener">Anthropic — Building effective agents</a></td>
+      <td><span lang="zh-Hant">第 6 章。workflow 與 agent 的區分、常見模式，以及「從簡單開始」。</span><span lang="en">Ch. 6. Workflows vs agents, common patterns, and "start simple".</span></td></tr>
+    <tr><td><a href="https://hamel.dev/blog/posts/evals/" rel="noopener">Hamel Husain — Your AI Product Needs Evals</a></td>
+      <td><span lang="zh-Hant">第 7 章。從錯誤分析出發的評測方法。</span><span lang="en">Ch. 7. Evaluation grounded in error analysis.</span></td></tr>
+    <tr><td><a href="https://simonwillison.net/tags/prompt-injection/" rel="noopener">Simon Willison — prompt injection</a></td>
+      <td><span lang="zh-Hant">第 8 章。提示注入的持續追蹤，包括「致命三要素」。</span><span lang="en">Ch. 8. Ongoing coverage of prompt injection, including the lethal trifecta.</span></td></tr>
+    <tr><td><a href="https://genai.owasp.org/" rel="noopener">OWASP GenAI Security Project</a></td>
+      <td><span lang="zh-Hant">第 8 章。LLM 應用的風險清單，可用來和客戶的資安團隊對話。</span><span lang="en">Ch. 8. Risk lists for LLM applications, useful when talking to customer security teams.</span></td></tr>
+    <tr><td><a href="https://modelcontextprotocol.io" rel="noopener">Model Context Protocol</a></td>
+      <td><span lang="zh-Hant">第 6 章、練習 3。協定規格與官方 SDK。</span><span lang="en">Ch. 6, lab 3. Specification and official SDKs.</span></td></tr>
+    <tr><td><a href="https://github.com/pgvector/pgvector" rel="noopener">pgvector</a></td>
+      <td><span lang="zh-Hant">第 5 章。索引類型、參數與過濾查詢的注意事項。</span><span lang="en">Ch. 5. Index types, parameters and filtered-query caveats.</span></td></tr>
+    <tr><td><a href="https://docs.pydantic.dev" rel="noopener">Pydantic</a></td>
+      <td><span lang="zh-Hant">第 4 章。validator、validation context、JSON Schema 產生。</span><span lang="en">Ch. 4. Validators, validation context, JSON Schema generation.</span></td></tr>
+    <tr><td>Chip Huyen — <em>AI Engineering</em> (O'Reilly, 2025)</td>
+      <td><span lang="zh-Hant">全課程。以基礎模型建構應用的完整工程觀點。</span><span lang="en">Whole course. A full engineering view of building on foundation models.</span></td></tr>
+    <tr><td><a href="https://dataintensive.net/" rel="noopener">Martin Kleppmann — <em>Designing Data-Intensive Applications</em></a></td>
+      <td><span lang="zh-Hant">第 5、8 章。AI 系統的很多問題其實是資料系統的問題：一致性、索引、快取。</span><span lang="en">Ch. 5, 8. Many AI-system problems are data-system problems: consistency, indexing, caching.</span></td></tr>
+    <tr><td>Cormack, Clarke &amp; Büttcher — <em>Reciprocal Rank Fusion outperforms Condorcet and individual rank learning methods</em> (SIGIR 2009)</td>
+      <td><span lang="zh-Hant">第 5 章。RRF 的原始論文，很短。</span><span lang="en">Ch. 5. The original RRF paper; short.</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="certs"><span lang="zh-Hant">關於證照</span><span lang="en">About certifications</span></h2>
+<p lang="zh-Hant">對 FDE 這類職位，證照的參考價值有限。比較有說服力的是：<strong>你做過、上線過、能講清楚取捨的系統</strong>，加上一份公開的作品或技術文章。如果客戶主要在某一家雲端平台上，該平台的架構類證照能幫你更快和客戶的基礎架構團隊建立共同語言，這是實際的用處。不要為了收集證照而犧牲做專案的時間。</p>
+<p lang="en">For FDE-type roles, certifications carry limited weight. What persuades is <strong>systems you built and shipped and can explain the trade-offs of</strong>, plus public work or technical writing. If your customers mostly run on one cloud, that cloud's architecture certification helps you share vocabulary with their infrastructure teams faster; that is its practical value. Don't trade project time for collecting certificates.</p>
+
+<h2 id="next"><span lang="zh-Hant">接下來</span><span lang="en">What next</span></h2>
+<p lang="zh-Hant">挑一個你工作上真實存在的小問題，照第 2 章的方式寫下成功條件，用第 4 到 7 章的方法做出來，並在第一週就建立測試集。做完一次完整的循環，比讀完所有教材更有收穫。</p>
+<p lang="en">Pick a small, real problem from your own work, write success criteria as in chapter 2, build it with the methods from chapters 4–7, and start the test set in week one. One full loop teaches more than any amount of reading.</p>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

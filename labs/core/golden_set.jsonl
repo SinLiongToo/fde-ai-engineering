@@ -1,0 +1,13 @@
+{"id": "exact-error-code", "query": "what does PAY-4102 mean", "relevant": ["CLAUSE-006"], "must_include": ["merchant category code"], "tags": ["exact-id"]}
+{"id": "exact-setting", "query": "lock_timeout value for DDL", "relevant": ["CLAUSE-004"], "must_include": ["lock_timeout = 2s"], "tags": ["exact-id"]}
+{"id": "paraphrase-migration", "query": "how do I migrate a big postgres table safely", "relevant": ["CLAUSE-004"], "must_include": ["lock_timeout"], "tags": ["paraphrase"]}
+{"id": "paraphrase-latency", "query": "how slow can payment webhooks be", "relevant": ["CLAUSE-001"], "must_include": ["250 ms"], "tags": ["paraphrase"]}
+{"id": "synonym-escalation", "query": "who gets paged if nobody answers the alert", "relevant": ["CLAUSE-010"], "must_include": ["secondary"], "tags": ["synonym"]}
+{"id": "drop-table", "query": "approval needed before TRUNCATE on the ledger", "relevant": ["CLAUSE-003"], "must_include": ["two engineers"], "tags": ["exact-id"]}
+{"id": "rate-limit", "query": "requests per minute limit for model API calls", "relevant": ["CLAUSE-005"], "must_include": ["100 requests per minute"], "tags": ["keyword"]}
+{"id": "replica", "query": "where should reporting queries run", "relevant": ["CLAUSE-008"], "must_include": ["read replica"], "tags": ["keyword"]}
+{"id": "gdpr-allowed", "query": "personal data leaving the EU", "relevant": ["CLAUSE-002"], "user_groups": ["legal"], "must_include": ["Article 44"], "tags": ["acl"]}
+{"id": "gdpr-forbidden", "query": "personal data leaving the EU", "relevant": [], "forbidden": ["CLAUSE-002", "CLAUSE-009"], "user_groups": [], "tags": ["acl"]}
+{"id": "secrets-forbidden", "query": "where are API keys stored", "relevant": [], "forbidden": ["CLAUSE-007"], "user_groups": ["support"], "tags": ["acl"]}
+{"id": "retention", "query": "how long do we keep chat transcripts", "relevant": ["CLAUSE-009"], "user_groups": ["legal"], "must_include": ["30 days"], "tags": ["keyword"]}
+{"id": "semantic-oncall", "query": "who is woken up at night", "relevant": ["CLAUSE-010"], "must_include": ["on-call"], "tags": ["synonym"], "note": "Known failure: no word overlap with CLAUSE-010. Needs a real embedding model (lab exercise 2)."}

@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="index"
+  data-title-zh="AI 工程實戰課：給前線部署工程師 (FDE)"
+  data-title-en="AI Engineering for Forward Deployed Engineers">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 工程實戰課：給前線部署工程師 (FDE)</title>
+<meta name="description" content="給有經驗的軟體工程師：如何在客戶現場把 LLM 系統做到能上線。結構化輸出、檢索、Agent、評測與上線，附可執行的 Python 練習。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="assets/site.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<section class="hero">
+  <div class="eyebrow"><span lang="zh-Hant">給有經驗的軟體工程師</span><span lang="en">For experienced software engineers</span></div>
+  <h1>
+    <span lang="zh-Hant">AI 工程實戰：把 LLM 系統做到能上線</span>
+    <span lang="en">AI engineering: getting LLM systems to production</span>
+  </h1>
+  <p class="lede" lang="zh-Hant">
+    前線部署工程師（Forward Deployed Engineer，FDE）的工作，是進到客戶的環境裡，把模糊的需求變成真的在跑、有人在用、出事時查得出原因的系統。這門課整理這個角色最常用到的工程方法：結構化輸出、檢索、Agent、評測與上線。每一章都對應一段可以在本機執行的 Python 程式。
+  </p>
+  <p class="lede" lang="en">
+    A Forward Deployed Engineer (FDE) goes into a customer's environment and turns a vague request into a system that
+    runs, gets used, and can be debugged when it breaks. This course covers the engineering methods the role relies on
+    most: structured output, retrieval, agents, evaluation and production operations. Every chapter maps to Python code
+    you can run locally.
+  </p>
+  <div class="cta">
+    <a class="btn primary" href="01-fde-role.html"><span lang="zh-Hant">從第 1 章開始</span><span lang="en">Start with chapter 1</span></a>
+    <a class="btn" href="#assess"><span lang="zh-Hant">先做自我評估</span><span lang="en">Take the self-assessment</span></a>
+    <a class="btn" href="09-labs.html"><span lang="zh-Hant">直接看練習</span><span lang="en">Go to the labs</span></a>
+  </div>
+</section>
+
+<h2 id="who"><span lang="zh-Hant">這門課適合誰</span><span lang="en">Who this is for</span></h2>
+<div lang="zh-Hant">
+  <p>你已經會寫正式環境的程式：懂 HTTP API、SQL、Git、測試與部署，也用過 LLM API 或 ChatGPT 之類的工具。你想知道的是：<strong>怎麼把一個 demo 做成客戶願意簽收、維運團隊接得住的系統</strong>。</p>
+  <p>這門課不會教 Python 語法、機器學習理論或模型訓練。它假設你用現成的模型 API，把力氣花在模型周圍的工程上。</p>
+</div>
+<div lang="en">
+  <p>You already ship production code: you know HTTP APIs, SQL, Git, testing and deployment, and you have used an LLM API
+  or a chat assistant. What you want to learn is <strong>how to turn a demo into a system a customer will sign off on and an
+  operations team can run</strong>.</p>
+  <p>This course does not teach Python syntax, ML theory or model training. It assumes you call hosted model APIs and
+  spend your effort on the engineering around them.</p>
+</div>
+
+<h2 id="map"><span lang="zh-Hant">課程地圖</span><span lang="en">Course map</span></h2>
+<p lang="zh-Hant">前三章談「工作方式」，第 4 到 8 章談「系統怎麼做」，第 9 章是練習與延伸閱讀。第 4 到 7 章依序建立在前一章之上，建議照順序讀。</p>
+<p lang="en">Chapters 1–3 cover how the work is done, 4–8 cover how the system is built, and 9 collects the labs and further reading. Chapters 4–7 build on each other, so read them in order.</p>
+
+<div class="diagram" role="img" aria-label="Course structure diagram">
+  <svg viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+    <rect class="box" x="10" y="20" width="200" height="190" rx="10"/>
+    <text x="110" y="45" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">工作方式</tspan><tspan lang="en">How you work</tspan></text>
+    <text x="30" y="85">01 FDE</text><text x="30" y="120">02 <tspan lang="zh-Hant">交付流程</tspan><tspan lang="en">Engagement</tspan></text><text x="30" y="155">03 Coding agents</text>
+
+    <rect class="box accent" x="250" y="20" width="300" height="190" rx="10"/>
+    <text x="400" y="45" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">系統怎麼做</tspan><tspan lang="en">How the system is built</tspan></text>
+    <text x="270" y="85">04 <tspan lang="zh-Hant">結構化輸出</tspan><tspan lang="en">Structured output</tspan></text>
+    <text x="270" y="115">05 <tspan lang="zh-Hant">檢索</tspan><tspan lang="en">Retrieval</tspan></text>
+    <text x="270" y="145">06 Agents</text>
+    <text x="270" y="175">07 Evals</text>
+    <text x="420" y="130">08 <tspan lang="zh-Hant">上線</tspan><tspan lang="en">Production</tspan></text>
+    <path class="edge accent" d="M360 115 C 390 115, 395 125, 415 126" marker-end="url(#ah)"/>
+    <path class="edge accent" d="M340 172 C 390 172, 395 140, 415 133" marker-end="url(#ah)"/>
+
+    <rect class="box" x="590" y="20" width="120" height="190" rx="10"/>
+    <text x="650" y="45" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">練習</tspan><tspan lang="en">Practice</tspan></text>
+    <text x="650" y="110" text-anchor="middle">09 Labs</text>
+    <text x="650" y="135" text-anchor="middle" class="muted">3 labs</text>
+    <path class="edge" d="M210 115 L 248 115" marker-end="url(#ah)"/>
+    <path class="edge" d="M550 115 L 588 115" marker-end="url(#ah)"/>
+  </svg>
+</div>
+
+<ol class="chapter-list" id="chapterList"></ol>
+
+<h2 id="how"><span lang="zh-Hant">怎麼使用這門課</span><span lang="en">How to use this course</span></h2>
+<ul lang="zh-Hant">
+  <li><strong>每章開頭有學習目標</strong>，結尾有小測驗。測驗答錯會顯示說明，不計分。</li>
+  <li><strong>第 4 到 7 章有可以在瀏覽器裡操作的示範</strong>。示範用的是和 Python 練習相同的演算法，不是寫死的動畫。</li>
+  <li><strong>程式碼都在 <code>labs/</code> 資料夾</strong>，完全離線可執行，不需要 API key。安裝方式見<a href="09-labs.html">第 9 章</a>。</li>
+  <li>右上角可以切換中英文與深淺色。閱讀進度存在你的瀏覽器裡。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Each chapter opens with learning objectives</strong> and ends with a short quiz. Wrong answers show an explanation; nothing is scored.</li>
+  <li><strong>Chapters 4–7 include in-browser demos</strong> that run the same algorithms as the Python labs, not canned animations.</li>
+  <li><strong>All code lives in <code>labs/</code></strong> and runs offline with no API key. Setup is in <a href="09-labs.html">chapter 9</a>.</li>
+  <li>Switch language and theme from the top right. Your reading progress is stored in your browser.</li>
+</ul>
+
+<div class="callout warn">
+  <span class="label"><span lang="zh-Hant">關於數字</span><span lang="en">About numbers</span></span>
+  <p lang="zh-Hant">這門課刻意不提供「準確率提升 X%」「延遲低於 Y 毫秒」這類通用數字。這些數字取決於你的資料、模型與流量，拿別人的數字當目標是常見的錯誤。課程教的是<strong>怎麼在你的系統上量出自己的數字</strong>（第 7 章）。</p>
+  <p lang="en">This course deliberately avoids generic claims like "accuracy improves by X%" or "latency under Y ms". Those numbers
+  depend on your data, model and traffic, and borrowing someone else's figures as targets is a common mistake. What the
+  course teaches is <strong>how to measure your own numbers on your own system</strong> (chapter 7).</p>
+</div>
+
+<h2 id="assess"><span lang="zh-Hant">自我評估：從哪裡開始讀</span><span lang="en">Self-assessment: where to start</span></h2>
+<p lang="zh-Hant">每題選最接近你<strong>現在實際在做</strong>的描述。結果只用來建議閱讀順序，不會上傳。</p>
+<p lang="en">For each question pick the option closest to what you <strong>actually do today</strong>. The result only suggests a reading order and stays in your browser.</p>
+
+<form class="assess" id="assessForm">
+  <fieldset data-chapters="03-ai-assisted-dev">
+    <legend><span lang="zh-Hant">用 AI 寫程式</span><span lang="en">Coding with AI</span></legend>
+    <label><input type="radio" name="a1" value="0"><span><span lang="zh-Hant">偶爾在聊天介面問問題，再貼回編輯器。</span><span lang="en">I occasionally ask a chat assistant and paste the answer back.</span></span></label>
+    <label><input type="radio" name="a1" value="1"><span><span lang="zh-Hant">每天用補全或 agent 改程式，但很少寫規格或設定專案規則。</span><span lang="en">I use completion or an agent daily, but rarely write specs or project rules for it.</span></span></label>
+    <label><input type="radio" name="a1" value="2"><span><span lang="zh-Hant">我會先寫規格與測試，讓 agent 做小步修改，並逐一審查 diff。</span><span lang="en">I write specs and tests first, have the agent work in small steps, and review every diff.</span></span></label>
+  </fieldset>
+  <fieldset data-chapters="04-structured-output">
+    <legend><span lang="zh-Hant">處理模型輸出</span><span lang="en">Handling model output</span></legend>
+    <label><input type="radio" name="a2" value="0"><span><span lang="zh-Hant">在 prompt 裡要求「請回傳 JSON」，然後直接 json.loads。</span><span lang="en">I ask for "JSON only" in the prompt and call json.loads.</span></span></label>
+    <label><input type="radio" name="a2" value="1"><span><span lang="zh-Hant">用 schema 或 structured output，但沒有驗證業務規則。</span><span lang="en">I use a schema or structured output, but don't validate business rules.</span></span></label>
+    <label><input type="radio" name="a2" value="2"><span><span lang="zh-Hant">schema 加業務規則驗證，失敗時把錯誤回饋給模型重試，並記錄每次嘗試。</span><span lang="en">Schema plus business-rule validation, with error feedback retries that are logged.</span></span></label>
+  </fieldset>
+  <fieldset data-chapters="05-retrieval">
+    <legend><span lang="zh-Hant">檢索 (RAG)</span><span lang="en">Retrieval (RAG)</span></legend>
+    <label><input type="radio" name="a3" value="0"><span><span lang="zh-Hant">還沒做過，或只照教學接過向量資料庫。</span><span lang="en">Never built one, or only followed a vector-DB tutorial.</span></span></label>
+    <label><input type="radio" name="a3" value="1"><span><span lang="zh-Hant">做過向量檢索，但沒處理精確代號、權限，也沒量過 recall。</span><span lang="en">Built vector search, but not exact IDs, permissions, or measured recall.</span></span></label>
+    <label><input type="radio" name="a3" value="2"><span><span lang="zh-Hant">混合檢索、權限過濾，並用測試集量 recall@k。</span><span lang="en">Hybrid search with permission filtering, with recall@k measured on a test set.</span></span></label>
+  </fieldset>
+  <fieldset data-chapters="06-agents">
+    <legend><span lang="zh-Hant">Agent 與工具</span><span lang="en">Agents and tools</span></legend>
+    <label><input type="radio" name="a4" value="0"><span><span lang="zh-Hant">還沒讓模型呼叫過會改資料的工具。</span><span lang="en">I haven't let a model call a tool that changes data.</span></span></label>
+    <label><input type="radio" name="a4" value="1"><span><span lang="zh-Hant">做過工具呼叫，但沒有狀態保存或人工核准。</span><span lang="en">I've built tool calling, but without saved state or human approval.</span></span></label>
+    <label><input type="radio" name="a4" value="2"><span><span lang="zh-Hant">有 checkpoint、中斷/恢復、最小權限，以及核准紀錄。</span><span lang="en">Checkpoints, interrupt/resume, least privilege and an approval audit trail.</span></span></label>
+  </fieldset>
+  <fieldset data-chapters="07-evals">
+    <legend><span lang="zh-Hant">評測</span><span lang="en">Evaluation</span></legend>
+    <label><input type="radio" name="a5" value="0"><span><span lang="zh-Hant">改完 prompt 手動試幾個問題，看起來可以就上。</span><span lang="en">After a prompt change I try a few questions by hand and ship if it looks fine.</span></span></label>
+    <label><input type="radio" name="a5" value="1"><span><span lang="zh-Hant">有一份測試問題，但不是每次改動都跑，也沒有 baseline。</span><span lang="en">I have a list of test questions, but don't run it on every change or keep a baseline.</span></span></label>
+    <label><input type="radio" name="a5" value="2"><span><span lang="zh-Hant">測試集來自真實流量，CI 每次都跑並和 baseline 比較。</span><span lang="en">Test cases come from real traffic; CI runs them on every change against a baseline.</span></span></label>
+  </fieldset>
+  <fieldset data-chapters="02-engagement 08-production">
+    <legend><span lang="zh-Hant">客戶與上線</span><span lang="en">Customers and production</span></legend>
+    <label><input type="radio" name="a6" value="0"><span><span lang="zh-Hant">習慣拿到寫好的需求單再開始做。</span><span lang="en">I prefer to start from a written ticket.</span></span></label>
+    <label><input type="radio" name="a6" value="1"><span><span lang="zh-Hant">會和需求方討論，但很少先定義成功指標或上線條件。</span><span lang="en">I talk with stakeholders, but rarely define success metrics or launch criteria first.</span></span></label>
+    <label><input type="radio" name="a6" value="2"><span><span lang="zh-Hant">會先和客戶定出可量測的成功條件，並規劃監控、交接與回滾。</span><span lang="en">I agree on measurable success criteria first and plan monitoring, handover and rollback.</span></span></label>
+  </fieldset>
+  <button class="btn primary" type="submit"><span lang="zh-Hant">看建議</span><span lang="en">Show recommendations</span></button>
+  <div id="assessResult" aria-live="polite"></div>
+</form>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+<footer class="site-footer">
+  <span lang="zh-Hant">課程內容與程式碼以 MIT 授權釋出。</span><span lang="en">Course text and code are released under the MIT License.</span>
+</footer>
+
+<script>
+(function () {
+  function both(zh, en) { return '<span lang="zh-Hant">' + zh + '</span><span lang="en">' + en + '</span>'; }
+  var DESC = {
+    "01-fde-role": ["這個角色實際在做什麼、和其他職位差在哪裡，以及需要哪些能力。", "What the role involves day to day, how it differs from adjacent roles, and the skills it needs."],
+    "02-engagement": ["從第一次會議到交接：探索、資料、原型、強化、上線，每一步要交出什麼。", "From first meeting to handover: discovery, data, prototype, hardening, launch, and what each step must produce."],
+    "03-ai-assisted-dev": ["用 coding agent 加速，但不讓它降低品質：規格、脈絡、小步修改與審查。", "Getting speed from coding agents without losing quality: specs, context, small steps and review."],
+    "04-structured-output": ["把模型輸出當成不可信的外部輸入：schema、業務規則驗證與修復迴圈。", "Treat model output as untrusted input: schemas, business-rule validation and repair loops."],
+    "05-retrieval": ["詞彙與向量檢索各自的盲點、RRF 融合、權限過濾，以及怎麼量 recall。", "Blind spots of lexical and vector search, RRF fusion, permission filtering and measuring recall."],
+    "06-agents": ["什麼時候該用 workflow 而不是 agent、工具設計、狀態保存與人工核准。", "When a workflow beats an agent, tool design, durable state and human approval."],
+    "07-evals": ["從真實失敗建立測試集、程式評分、LLM 評審的限制，以及 CI 中的退步檢查。", "Building test sets from real failures, code graders, judge pitfalls and regression gates in CI."],
+    "08-production": ["追蹤、提示注入防護、個資、成本與延遲、可靠性、灰度發布與交接。", "Tracing, prompt-injection defense, PII, cost and latency, reliability, rollout and handover."],
+    "09-labs": ["三個可執行的練習、延伸作業，以及值得讀的參考資料。", "Three runnable labs, extension exercises and reading worth your time."]
+  };
+  function renderList() {
+    var list = document.getElementById("chapterList");
+    var chapters = window.FDE_CHAPTERS || [];
+    var done = (window.FDE_PROGRESS && window.FDE_PROGRESS()) || {};
+    list.innerHTML = chapters.map(function (c, i) {
+      var d = DESC[c.slug] || ["", ""];
+      return '<li><a href="' + c.slug + '.html"><span class="n">' + String(i + 1).padStart(2, "0") + '</span>' +
+        '<span class="t">' + both(c.zh, c.en) + '</span>' +
+        '<span class="s">' + (done[c.slug] ? both("已讀完 ✓", "Done ✓") : '<span class="muted" style="color:var(--fg-faint)">' + c.min + ' min</span>') + '</span>' +
+        '<span class="d">' + both(d[0], d[1]) + '</span></a></li>';
+    }).join("");
+  }
+  var TITLES = {}; (window.FDE_CHAPTERS || []).forEach(function (c) { TITLES[c.slug] = c; });
+  function onSubmit(e) {
+    e.preventDefault();
+    var weak = [], missing = 0;
+    document.querySelectorAll("#assessForm fieldset").forEach(function (fs) {
+      var checked = fs.querySelector("input:checked");
+      if (!checked) { missing++; return; }
+      if (Number(checked.value) < 2) {
+        fs.getAttribute("data-chapters").split(" ").forEach(function (s) { weak.push({ slug: s, level: Number(checked.value) }); });
+      }
+    });
+    var out = document.getElementById("assessResult");
+    if (missing) {
+      out.innerHTML = '<p class="recommend">' + both("還有 " + missing + " 題沒有作答。", missing + " question(s) unanswered.") + "</p>";
+      return;
+    }
+    if (!weak.length) {
+      out.innerHTML = '<div class="recommend"><p>' + both("你在每個面向都已經有成熟的做法。建議直接到第 9 章做延伸練習，或挑你最近遇到問題的章節看「常見錯誤」段落。",
+        "You already have mature practices across the board. Go straight to the extension exercises in chapter 9, or skim the pitfalls section of whichever chapter matches your latest problem.") + "</p></div>";
+      return;
+    }
+    weak.sort(function (a, b) { return a.level - b.level || a.slug.localeCompare(b.slug); });
+    var seen = {}, items = [];
+    weak.forEach(function (w) {
+      if (seen[w.slug]) return; seen[w.slug] = 1;
+      var c = TITLES[w.slug] || (window.FDE_CHAPTERS || []).filter(function (x) { return x.slug === w.slug; })[0];
+      if (c) items.push('<li><a href="' + c.slug + '.html">' + both(c.zh, c.en) + "</a>" +
+        (w.level === 0 ? both("（優先）", " (start here)") : "") + "</li>");
+    });
+    out.innerHTML = '<div class="recommend"><p><strong>' + both("建議閱讀順序", "Suggested reading order") + "</strong></p><ol>" + items.join("") +
+      "</ol><p>" + both("第 1 章很短，建議所有人都先讀。", "Chapter 1 is short; read it first regardless.") + "</p></div>";
+  }
+  function init() {
+    renderList();
+    document.addEventListener("fde-progress", renderList);
+    document.getElementById("assessForm").addEventListener("submit", onSubmit);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+})();
+</script>
+</body>
+</html>
