@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="b2-first-api-call"
+  data-title-zh="B2 第一次呼叫 AI · AI 工程實戰課"
+  data-title-en="B2 Your first API call · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B2 第一次呼叫 AI · AI 工程實戰課</title>
+<meta name="description" content="入門篇第 2 章：API 是什麼、一個請求裡有什麼、API key 怎麼保管，以及為什麼 AI 不會記得你們聊過什麼。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/demos/basics.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">入門篇 · 第 2 章</span><span lang="en">Basics · Chapter 2</span></div>
+<h1><span lang="zh-Hant">第一次呼叫 AI</span><span lang="en">Your first API call</span></h1>
+<p class="lede" lang="zh-Hant">在聊天網頁上用 AI，和在你自己的程式裡用 AI，是兩件不同的事。這一章帶你看懂：你的程式送了什麼給 AI、收到什麼，以及一個很多人第一次都會誤會的事實。</p>
+<p class="lede" lang="en">Using AI in a chat website and using it from your own program are different things. This chapter shows what your program sends to the AI, what comes back, and one fact that almost everyone misunderstands at first.</p>
+<div class="meta"><span>⏱ 15 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>labs/beginner/first_call.py</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">讀完這章你會知道</span><span lang="en">After this chapter you'll know</span></h2>
+  <ul lang="zh-Hant">
+    <li>API 是什麼，一個請求裡有哪些東西。</li>
+    <li>API key 是什麼，為什麼絕對不能寫進程式碼。</li>
+    <li>為什麼 AI 不會記得你們之前聊過什麼，聊天程式又是怎麼「記得」的。</li>
+  </ul>
+  <ul lang="en">
+    <li>What an API is and what goes into a request.</li>
+    <li>What an API key is and why it must never be written into your code.</li>
+    <li>Why the AI doesn't remember earlier conversation, and how chat apps "remember" anyway.</li>
+  </ul>
+</section>
+
+<h2 id="api"><span lang="zh-Hant">API 是什麼</span><span lang="en">What an API is</span></h2>
+<p lang="zh-Hant">想像你在餐廳點餐：你（你的程式）把點餐單（<strong>請求</strong>）交給廚房（AI 服務），廚房做好後送回一道菜（<strong>回應</strong>）。你不需要知道廚房裡怎麼煮，只要知道點餐單要怎麼填。API 就是那張「點餐單的規則」：要寫哪些欄位、用什麼格式。</p>
+<p lang="en">Picture ordering at a restaurant: you (your program) hand an order slip (the <strong>request</strong>) to the kitchen (the AI service), and the kitchen sends back a dish (the <strong>response</strong>). You don't need to know how the kitchen cooks, only how to fill in the slip. The API is the set of rules for that slip: which fields, in what format.</p>
+
+<h2 id="request"><span lang="zh-Hant">一個請求裡有什麼</span><span lang="en">What's in a request</span></h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">欄位</span><span lang="en">Field</span></th><th><span lang="zh-Hant">意思</span><span lang="en">Meaning</span></th><th><span lang="zh-Hant">例子</span><span lang="en">Example</span></th></tr></thead>
+  <tbody>
+    <tr><td><code>model</code></td><td><span lang="zh-Hant">要用哪一個模型</span><span lang="en">Which model to use</span></td><td><code>"claude-opus-5-5"</code></td></tr>
+    <tr><td><code>system</code></td><td><span lang="zh-Hant">給 AI 的整體說明：它的角色、規則、語氣。每次都適用。</span><span lang="en">Overall instructions: role, rules, tone. Applies to every turn.</span></td><td><span lang="zh-Hant">「你是一位有耐心的程式老師…」</span><span lang="en">"You are a patient programming teacher…"</span></td></tr>
+    <tr><td><code>messages</code></td><td><span lang="zh-Hant">對話內容。每則訊息標明是誰說的：<code>user</code>（使用者）或 <code>assistant</code>（AI）。</span><span lang="en">The conversation. Each message says who spoke: <code>user</code> or <code>assistant</code>.</span></td><td><code>[{"role": "user", "content": "什麼是變數？"}]</code></td></tr>
+    <tr><td><code>max_tokens</code></td><td><span lang="zh-Hant">回答最多可以多長（以 token 計）</span><span lang="en">Maximum answer length, in tokens</span></td><td><code>1000</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="memory"><span lang="zh-Hant">最重要的一件事：AI 不會記得你</span><span lang="en">The most important fact: the AI doesn't remember you</span></h2>
+<div class="callout tip">
+  <span class="label"><span lang="zh-Hant">一句話重點</span><span lang="en">Key point</span></span>
+  <p lang="zh-Hant"><strong>API 每一次請求都是獨立的。AI 不會記得上一次你問了什麼。聊天程式之所以「記得」，是因為它每次都把整段對話重新送一次。</strong></p>
+  <p lang="en"><strong>Every API request is independent. The AI doesn't remember what you asked last time. Chat apps "remember" because they resend the whole conversation every time.</strong></p>
+</div>
+<p lang="zh-Hant">這帶來兩個結果：第一，如果你的程式忘了把之前的對話送出去，AI 就看不懂「它」「剛剛那個」指的是什麼。第二，<strong>對話越長，每次送出的內容越多，費用也越高</strong>。用下面的示範感受一下。</p>
+<p lang="en">Two consequences follow. First, if your program forgets to send the earlier conversation, the AI can't tell what "it" or "that one" refers to. Second, <strong>the longer the conversation, the more you send each time, and the more it costs</strong>. Try it below.</p>
+
+<div class="demo" id="convoDemo">
+  <div class="demo-head"><span class="tag">demo</span><h3><span lang="zh-Hant">看看每次到底送出了什麼</span><span lang="en">See what is actually sent each time</span></h3></div>
+  <div class="demo-body">
+    <div class="row"><label for="cvSystem" style="font-size:.9rem;min-width:4.5rem">system</label>
+      <input type="text" id="cvSystem" value="你是一位有耐心的程式老師。用繁體中文、簡短地回答。"></div>
+    <div class="row"><label for="cvQ" style="font-size:.9rem;min-width:4.5rem"><span lang="zh-Hant">你的問題</span><span lang="en">Question</span></label>
+      <input type="text" id="cvQ" value="什麼是變數？"></div>
+    <div class="row">
+      <button class="btn primary" id="cvSend" type="button"><span lang="zh-Hant">送出</span><span lang="en">Send</span></button>
+      <button class="btn" id="cvReset" type="button"><span lang="zh-Hant">重來</span><span lang="en">Reset</span></button>
+      <label style="font-size:.88rem;display:flex;gap:.4rem;align-items:center"><input type="checkbox" id="cvForget">
+        <span><span lang="zh-Hant">忘記送出之前的對話（常見錯誤）</span><span lang="en">Forget to send the history (common bug)</span></span></label>
+    </div>
+    <p class="hint" lang="zh-Hant">多按幾次「送出」，看看 <code>messages</code> 怎麼越變越長。這裡不會真的呼叫 AI，回答用代號表示。</p>
+    <p class="hint" lang="en">Press Send a few times and watch <code>messages</code> grow. Nothing is actually sent to an AI here; answers are placeholders.</p>
+    <div id="cvInfo" style="font-size:.9rem;margin:.4rem 0"></div>
+    <pre class="output" id="cvJson"></pre>
+  </div>
+</div>
+
+<h2 id="key"><span lang="zh-Hant">API key：當成密碼加信用卡</span><span lang="en">API keys: treat them like a password plus a credit card</span></h2>
+<p lang="zh-Hant">要使用 AI 服務的 API，你需要一把 <strong>API key</strong>（一串很長的字）。它證明「這個請求是你送的」，而且<strong>費用會算在你頭上</strong>。如果被別人拿到，他們可以用你的帳號花你的錢。</p>
+<p lang="en">To use an AI service's API you need an <strong>API key</strong> (a long string). It proves the request came from you, and <strong>the charges go to you</strong>. Anyone who gets it can spend your money from your account.</p>
+<div class="callout bad">
+  <span class="label"><span lang="zh-Hant">絕對不要</span><span lang="en">Never</span></span>
+  <p lang="zh-Hant">把 API key 直接寫在程式碼裡，或上傳到 GitHub。網路上有程式專門在掃描公開的程式碼找 key。正確做法是放在<strong>環境變數</strong>裡，程式執行時再讀取。</p>
+  <p lang="en">Write an API key directly in your code or push it to GitHub. Bots scan public code looking for keys. Put it in an <strong>environment variable</strong> instead, and read it when the program runs.</p>
+</div>
+<figure class="code"><figcaption><span><span lang="zh-Hant">設定環境變數</span><span lang="en">Setting an environment variable</span></span></figcaption>
+<pre><code class="language-bash"># Windows PowerShell
+$env:ANTHROPIC_API_KEY = "你的 key"
+
+# macOS / Linux
+export ANTHROPIC_API_KEY="你的 key"</code></pre>
+</figure>
+
+<h2 id="code"><span lang="zh-Hant">程式碼</span><span lang="en">The code</span></h2>
+<p lang="zh-Hant">練習檔 <code>first_call.py</code> 沒有 API key 也能執行：它會印出每次「要送出去的內容」，讓你看到 <code>messages</code> 怎麼累積。設定好 key 並安裝 <code>anthropic</code> 套件後，它就會真的呼叫 Claude。核心部分如下：</p>
+<p lang="en">The lab file <code>first_call.py</code> runs without an API key: it prints what would be sent each time, so you can watch <code>messages</code> grow. Once you set a key and install the <code>anthropic</code> package, it calls Claude for real. The core looks like this:</p>
+<figure class="code"><figcaption><span>labs/beginner/first_call.py</span></figcaption>
+<pre><code class="language-python">import anthropic
+
+client = anthropic.Anthropic()  # 會自動讀取環境變數 ANTHROPIC_API_KEY
+
+response = client.messages.create(
+    model="claude-opus-5-5",
+    max_tokens=1000,
+    system="你是一位有耐心的程式老師。用繁體中文、簡短地回答。",
+    messages=[
+        {"role": "user", "content": "什麼是變數？"},
+    ],
+)
+
+# 回應裡可能有好幾個區塊，我們只取「文字」區塊
+text = "".join(block.text for block in response.content if block.type == "text")
+print(text)
+print(response.usage.input_tokens, response.usage.output_tokens)  # 這次用了多少 token</code></pre>
+</figure>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash">python -m labs.beginner.first_call       # 沒有 key：只顯示會送出的內容
+pip install anthropic                     # 有 key 時才需要</code></pre>
+</figure>
+<div class="callout note">
+  <span class="label"><span lang="zh-Hant">為什麼不是直接用 response.content[0]？</span><span lang="en">Why not just response.content[0]?</span></span>
+  <p lang="zh-Hant">很多舊教學會寫 <code>response.content[0].text</code>。較新的模型在回應裡可能先放其他類型的區塊（例如思考過程的區塊），第一個不一定是文字。只挑 <code>type == "text"</code> 的區塊比較安全。</p>
+  <p lang="en">Many older tutorials write <code>response.content[0].text</code>. Newer models may put other kinds of blocks (such as a thinking block) first, so the first block isn't necessarily text. Picking only blocks with <code>type == "text"</code> is safer.</p>
+</div>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">1. 使用者先問「Python 是什麼？」，接著問「它難學嗎？」。第二次請求的 messages 應該包含？</span><span lang="en">1. A user asks "What is Python?" then "Is it hard to learn?". The second request's messages should contain:</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">只有「它難學嗎？」</span><span lang="en">Only "Is it hard to learn?"</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">第一個問題、AI 的第一個回答，以及「它難學嗎？」</span><span lang="en">The first question, the AI's first answer, and "Is it hard to learn?"</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">只要送 system，AI 會自己記得。</span><span lang="en">Just the system prompt; the AI remembers the rest.</span></span></label>
+    <div class="explain" lang="zh-Hant">API 不會記得上一次的請求。沒有前文，AI 不知道「它」指的是 Python。</div>
+    <div class="explain" lang="en">The API doesn't remember previous requests. Without the history, the AI can't know "it" means Python.</div>
+  </fieldset>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">2. API key 應該放在哪裡？</span><span lang="en">2. Where should an API key live?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">直接寫在程式碼裡，比較方便。</span><span lang="en">In the code itself; it's convenient.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">寫在 README 裡，讓同事也能用。</span><span lang="en">In the README so colleagues can use it.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">環境變數或公司的密碼管理系統，不進入程式碼與版本控制。</span><span lang="en">An environment variable or the company's secret manager, never in code or version control.</span></span></label>
+    <div class="explain" lang="zh-Hant">key 等於你的帳號與錢包。任何進到程式碼或 GitHub 的 key 都應該視為已經外洩，立刻作廢重發。</div>
+    <div class="explain" lang="en">A key is your account and your wallet. Any key that reaches code or GitHub should be treated as leaked: revoke it and issue a new one.</div>
+  </fieldset>
+  <fieldset data-answer="a">
+    <legend><span lang="zh-Hant">3. 一段對話聊了 50 輪，為什麼越後面的請求越貴？</span><span lang="en">3. Why do later requests in a 50-turn chat cost more?</span></legend>
+    <label><input type="radio" name="q3" value="a"><span><span lang="zh-Hant">因為每次都要把前面所有對話一起送出，輸入的 token 越來越多。</span><span lang="en">Because every request resends all earlier turns, so input tokens keep growing.</span></span></label>
+    <label><input type="radio" name="q3" value="b"><span><span lang="zh-Hant">因為 AI 會越來越累。</span><span lang="en">Because the AI gets tired.</span></span></label>
+    <label><input type="radio" name="q3" value="c"><span><span lang="zh-Hant">因為後面的問題比較難。</span><span lang="en">Because later questions are harder.</span></span></label>
+    <div class="explain" lang="zh-Hant">輸入的 token 也要付費。長對話常見的做法是只保留最近幾輪，或把舊的對話整理成摘要。</div>
+    <div class="explain" lang="en">Input tokens are billed too. Long chats commonly keep only recent turns, or summarise older ones.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

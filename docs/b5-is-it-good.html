@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="b5-is-it-good"
+  data-title-zh="B5 它做得好嗎？簡單的測試 · AI 工程實戰課"
+  data-title-en="B5 Is it any good? Simple tests · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B5 它做得好嗎？簡單的測試 · AI 工程實戰課</title>
+<meta name="description" content="入門篇第 5 章：不要只試兩三題就說可以。準備一份考卷，每次修改後重考；並親手體驗為什麼只檢查關鍵字的自動評分不夠。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/demos/basics.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">入門篇 · 第 5 章</span><span lang="en">Basics · Chapter 5</span></div>
+<h1><span lang="zh-Hant">它做得好嗎？簡單的測試</span><span lang="en">Is it any good? Simple tests</span></h1>
+<p class="lede" lang="zh-Hant">你改了 prompt，試了兩個問題，看起來不錯，就上線了。一週後同事說：「它跟大家說病假不用附證明。」這一章教你用最簡單的方法避免這種事：準備一份考卷。</p>
+<p class="lede" lang="en">You changed the prompt, tried two questions, it looked fine, and you shipped it. A week later a colleague says: "it's been telling people sick leave doesn't need a doctor's note." This chapter shows the simplest way to avoid that: prepare an exam.</p>
+<div class="meta"><span>⏱ 15 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>labs/beginner/check_answers.py</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">讀完這章你會知道</span><span lang="en">After this chapter you'll know</span></h2>
+  <ul lang="zh-Hant">
+    <li>為什麼「試幾題看起來可以」不夠。</li>
+    <li>怎麼寫一份簡單的考卷，並在每次修改後重考。</li>
+    <li>自動評分能抓到什麼、抓不到什麼。</li>
+  </ul>
+  <ul lang="en">
+    <li>Why "I tried a few and it looked fine" isn't enough.</li>
+    <li>How to write a simple exam and re-run it after every change.</li>
+    <li>What automatic grading catches and what it misses.</li>
+  </ul>
+</section>
+
+<h2 id="exam"><span lang="zh-Hant">準備一份考卷</span><span lang="en">Prepare an exam</span></h2>
+<div class="callout tip">
+  <span class="label"><span lang="zh-Hant">一句話重點</span><span lang="en">Key point</span></span>
+  <p lang="zh-Hant"><strong>寫下一組問題和正確答案，每次修改 prompt 或程式後都重考一次。分數變差，就不要上線。</strong></p>
+  <p lang="en"><strong>Write down a set of questions with correct answers, and re-run them after every prompt or code change. If the score drops, don't ship.</strong></p>
+</div>
+<p lang="zh-Hant">為什麼要每次都重考？因為 AI 系統的改動常常「修好一個、弄壞另一個」：你為了讓它回答特休問題而改了 prompt，結果病假問題的答案變了。只試你剛改的那一題，是看不出來的。</p>
+<p lang="en">Why re-run every time? Because changes to AI systems often fix one thing and break another: you tweak the prompt to fix annual-leave answers, and sick-leave answers change. Testing only the question you just fixed won't reveal that.</p>
+<p lang="zh-Hant">好的考卷包含三種題目：</p>
+<p lang="en">A good exam includes three kinds of question:</p>
+<ul lang="zh-Hant">
+  <li><strong>一般題</strong>：使用者最常問的問題。最好從真實的提問紀錄裡挑。</li>
+  <li><strong>陷阱題</strong>：文件裡沒有答案的問題。正確答案是「不知道」。</li>
+  <li><strong>曾經出錯的題目</strong>：每次發現錯誤，修好後就把它加進考卷，確保以後不會再犯。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Common questions</strong>: what users ask most, ideally taken from real logs.</li>
+  <li><strong>Trick questions</strong>: questions the documents don't answer. The right answer is "I don't know".</li>
+  <li><strong>Past mistakes</strong>: every time you find and fix an error, add it to the exam so it can't silently come back.</li>
+</ul>
+
+<h2 id="demo"><span lang="zh-Hant">動手試：你來當閱卷老師</span><span lang="en">Try it: you're the grader</span></h2>
+<div class="demo" id="gradeDemo">
+  <div class="demo-head"><span class="tag">demo</span><h3><span lang="zh-Hant">這五個回答，哪些可以通過？</span><span lang="en">Which of these five answers pass?</span></h3></div>
+  <div class="demo-body">
+    <p class="hint" lang="zh-Hant">根據 B4 的員工手冊，判斷 AI 的每個回答是否通過。規則：內容要正確、要標註出處、手冊沒寫的要說不知道。判斷完按「對答案」，順便看看「只檢查關鍵字」的自動評分表現如何。</p>
+    <p class="hint" lang="en">Using the handbook from B4, decide whether each AI answer passes. Rules: correct content, a citation, and "don't know" when the handbook doesn't say. Then press "Check" and see how a keyword-only auto check compares. (Answers are in Chinese; the explanations are translated.)</p>
+    <div id="gdList"></div>
+    <div class="row">
+      <button class="btn primary" id="gdReveal" type="button"><span lang="zh-Hant">對答案</span><span lang="en">Check</span></button>
+      <button class="btn ghost" id="gdReset" type="button"><span lang="zh-Hant">重來</span><span lang="en">Reset</span></button>
+    </div>
+    <div id="gdResult" class="output" aria-live="polite" style="font-family:inherit"></div>
+  </div>
+</div>
+
+<h2 id="auto"><span lang="zh-Hant">自動評分：有用，但有極限</span><span lang="en">Automatic grading: useful, but limited</span></h2>
+<p lang="zh-Hant">人工閱卷很準，但很慢。所以我們會用程式自動檢查能檢查的部分，例如：答案裡有沒有出現關鍵數字、有沒有標註出處、陷阱題有沒有說「不知道」。剛才的示範也告訴你它的極限：<strong>「病假超過三天不需要附任何證明」包含了關鍵字「三天」，但意思完全相反</strong>。</p>
+<p lang="en">Human grading is accurate but slow, so we let code check what it can: whether the key number appears, whether there's a citation, whether trick questions get "I don't know". The demo also showed the limit: <strong>"sick leave over three days needs no certificate" contains the keyword "three days" but means the opposite</strong>.</p>
+<p lang="zh-Hant">實務上兩者搭配使用：程式檢查每一題、每一次；人定期抽查一部分，特別是重要的題目。進階篇第 7 章會教更完整的做法。</p>
+<p lang="en">In practice you combine both: code checks every question every time, and people regularly spot-check a sample, especially the important ones. Core chapter 07 covers the fuller approach.</p>
+
+<h2 id="code"><span lang="zh-Hant">程式碼：一份會自動考試的考卷</span><span lang="en">The code: an exam that grades itself</span></h2>
+<figure class="code"><figcaption><span>labs/beginner/check_answers.py</span></figcaption>
+<pre><code class="language-python"># 考題：問題、答案一定要出現的字、應該引用哪一段
+TEST_CASES = [
+    {"question": "請特休要提前幾天？", "must_include": ["三個工作天"], "source": "H1"},
+    {"question": "病假超過幾天要附證明？", "must_include": ["三天", "醫生證明"], "source": "H2"},
+    {"question": "一週可以在家工作幾天？", "must_include": ["兩天"], "source": "H4"},
+    {"question": "出差收據要多久內報帳？", "must_include": ["十四天"], "source": "H5"},
+    {"question": "筆電壞掉可以自己拿去修嗎？", "must_include": ["IT"], "source": "H6"},
+    {"question": "公司有提供午餐嗎？", "must_include": [], "source": None},  # 陷阱題：應該說不知道
+]</code></pre>
+</figure>
+<figure class="code"><figcaption><span><span lang="zh-Hant">執行結果</span><span lang="en">Output</span></span></figcaption>
+<pre><code>✓ 請特休要提前幾天？
+✓ 病假超過幾天要附證明？
+✓ 一週可以在家工作幾天？
+✓ 出差收據要多久內報帳？
+✗ 筆電壞掉可以自己拿去修嗎？
+    - 答案裡沒有「IT」
+    - 應該引用 H6，實際引用 None
+✗ 公司有提供午餐嗎？
+    - 手冊沒寫，卻硬給了答案
+
+通過 4 / 6 題</code></pre>
+</figure>
+<p lang="zh-Hant">兩題沒通過，正好是 B4 介紹的兩種搜尋失敗。這就是考卷的價值：問題被清楚地記錄下來，等你改進搜尋方法之後，重考一次就知道有沒有修好、有沒有弄壞其他題。</p>
+<p lang="en">The two failures are exactly the two search failures from B4. That's the value of an exam: problems are recorded clearly, and once you improve the search you re-run it to see whether you fixed them without breaking anything else.</p>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash">python -m labs.beginner.check_answers</code></pre>
+</figure>
+
+<h2 id="next"><span lang="zh-Hant">入門篇讀完了，接下來呢？</span><span lang="en">You've finished the basics. What next?</span></h2>
+<p lang="zh-Hant">恭喜！你已經懂了 AI 應用的基本運作方式。進階篇會把這五章的每一個概念，推進到「能在真實公司裡上線」的程度：</p>
+<p lang="en">Congratulations: you now understand how AI applications basically work. The core course takes each concept from these five chapters to the level needed to ship in a real company:</p>
+<div class="table-wrap">
+<table class="plain">
+  <thead><tr><th><span lang="zh-Hant">入門篇學到的</span><span lang="en">In the basics you learned</span></th><th><span lang="zh-Hant">進階篇會學到</span><span lang="en">In the core course you'll learn</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">B1 AI 會說錯話</span><span lang="en">B1 AI can be wrong</span></td><td><a href="04-structured-output.html"><span lang="zh-Hant">04 用程式驗證 AI 的輸出，錯了自動重試</span><span lang="en">04 Validating AI output in code, with automatic retries</span></a></td></tr>
+    <tr><td><span lang="zh-Hant">B2 呼叫 API</span><span lang="en">B2 Calling the API</span></td><td><a href="08-production.html"><span lang="zh-Hant">08 逾時、重試、費用監控、安全</span><span lang="en">08 Timeouts, retries, cost monitoring, security</span></a></td></tr>
+    <tr><td><span lang="zh-Hant">B3 寫清楚 prompt</span><span lang="en">B3 Clear prompts</span></td><td><a href="03-ai-assisted-dev.html"><span lang="zh-Hant">03 用 AI 幫你寫程式，而且不降低品質</span><span lang="en">03 Using AI to write code without lowering quality</span></a></td></tr>
+    <tr><td><span lang="zh-Hant">B4 開書考試</span><span lang="en">B4 Open-book exam</span></td><td><a href="05-retrieval.html"><span lang="zh-Hant">05 更聰明的搜尋（同義詞、混合搜尋、權限）</span><span lang="en">05 Smarter search (synonyms, hybrid search, permissions)</span></a></td></tr>
+    <tr><td><span lang="zh-Hant">B5 考卷</span><span lang="en">B5 The exam</span></td><td><a href="07-evals.html"><span lang="zh-Hant">07 自動評測放進 CI，擋下退步</span><span lang="en">07 Automated evals in CI that block regressions</span></a></td></tr>
+  </tbody>
+</table>
+</div>
+<p lang="zh-Hant">進階篇的用詞會比較專業。遇到看不懂的詞，可以查<a href="glossary.html">詞彙表</a>。建議從<a href="01-fde-role.html">第 01 章</a>開始，或直接跳到你最有興趣的章節。</p>
+<p lang="en">The core course uses more technical vocabulary. When you hit an unfamiliar term, check the <a href="glossary.html">glossary</a>. Start with <a href="01-fde-role.html">chapter 01</a>, or jump to whichever chapter interests you most.</p>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">1. 你修改了 prompt，讓特休問題回答得更好。接下來應該？</span><span lang="en">1. You changed the prompt so annual-leave answers improve. Next you should:</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">再問一次特休問題，確認變好了就上線。</span><span lang="en">Ask the annual-leave question again; if it's better, ship.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">把整份考卷重考一次，確認其他題目沒有變差。</span><span lang="en">Re-run the whole exam to make sure nothing else got worse.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">不需要測試，prompt 改得更清楚只會更好。</span><span lang="en">No need to test; a clearer prompt can only help.</span></span></label>
+    <div class="explain" lang="zh-Hant">修好一題、弄壞另一題是很常見的事。只有整份重考才看得出來。</div>
+    <div class="explain" lang="en">Fixing one question and breaking another is common. Only a full re-run reveals it.</div>
+  </fieldset>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">2. 為什麼考卷裡要放「文件裡沒有答案」的陷阱題？</span><span lang="en">2. Why include trick questions the documents don't answer?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">讓分數看起來低一點，比較謙虛。</span><span lang="en">To make the score look humbler.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">不需要，使用者只會問手冊裡有的問題。</span><span lang="en">You shouldn't; users only ask about what's in the handbook.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">確認 AI 在不知道答案時會誠實說不知道，而不是編一個。</span><span lang="en">To check that the AI honestly says "I don't know" instead of inventing an answer.</span></span></label>
+    <div class="explain" lang="zh-Hant">使用者一定會問到文件沒寫的事。編造的答案比「不知道」危險得多。</div>
+    <div class="explain" lang="en">Users will always ask things the documents don't cover. An invented answer is far more dangerous than "I don't know".</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

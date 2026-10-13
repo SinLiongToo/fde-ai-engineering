@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="b1-what-is-llm"
+  data-title-zh="B1 AI 語言模型在做什麼 · AI 工程實戰課"
+  data-title-en="B1 What a language model does · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B1 AI 語言模型在做什麼 · AI 工程實戰課</title>
+<meta name="description" content="入門篇第 1 章：用一個能在瀏覽器裡操作的迷你模型，理解大型語言模型其實是在「猜下一個字」，以及它為什麼會一本正經地說錯話。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/demos/basics.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">入門篇 · 第 1 章</span><span lang="en">Basics · Chapter 1</span></div>
+<h1><span lang="zh-Hant">AI 語言模型在做什麼</span><span lang="en">What a language model does</span></h1>
+<p class="lede" lang="zh-Hant">ChatGPT、Claude、Gemini 這些 AI，背後都是「大型語言模型」。聽起來很玄，但它做的事情可以用一句話說完。這一章用一個你可以親手操作的迷你模型，帶你看懂它。</p>
+<p class="lede" lang="en">ChatGPT, Claude and Gemini are all built on "large language models". It sounds mysterious, but what they do fits in one sentence. This chapter uses a tiny model you can play with to show you how.</p>
+<div class="meta"><span>⏱ 15 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>labs/beginner/next_word.py</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">讀完這章你會知道</span><span lang="en">After this chapter you'll know</span></h2>
+  <ul lang="zh-Hant">
+    <li>語言模型的核心動作：猜下一個字。</li>
+    <li>為什麼 AI 有時候會說出很通順、但完全錯誤的話。</li>
+    <li>token 和 context window 是什麼，為什麼你常常會看到這兩個詞。</li>
+  </ul>
+  <ul lang="en">
+    <li>The core move of a language model: guessing the next word.</li>
+    <li>Why AI sometimes says things that sound fluent but are completely wrong.</li>
+    <li>What tokens and the context window are, and why you keep hearing about them.</li>
+  </ul>
+</section>
+
+<h2 id="one-sentence"><span lang="zh-Hant">一句話說完</span><span lang="en">In one sentence</span></h2>
+<div class="callout tip">
+  <span class="label"><span lang="zh-Hant">一句話重點</span><span lang="en">Key point</span></span>
+  <p lang="zh-Hant"><strong>語言模型是一個「很會接話」的程式：看前面的文字，猜下一個字最可能是什麼，接上去，再猜下一個。</strong></p>
+  <p lang="en"><strong>A language model is a program that is very good at continuing text: it looks at the words so far, guesses the most likely next one, adds it, and guesses again.</strong></p>
+</div>
+<p lang="zh-Hant">你的手機輸入法就有類似的功能：打了「今天」，它會建議「天氣」「晚上」「要不要」。大型語言模型做的是同一件事，只是它讀過的文字多到難以想像，所以猜得非常準，準到看起來像在「思考」和「對話」。</p>
+<p lang="en">Your phone keyboard does something similar: type "see you" and it suggests "tomorrow", "soon", "later". A large language model does the same thing, except it has read an unimaginable amount of text, so its guesses are good enough to look like thinking and conversation.</p>
+
+<h2 id="demo"><span lang="zh-Hant">動手試：一個只讀過六句話的模型</span><span lang="en">Try it: a model that has read six sentences</span></h2>
+<p lang="zh-Hant">下面這個模型非常陽春：它只讀過六句話，而且只會看「最後一個字」來猜下一個字。但它的運作方式，和真正的語言模型是同一個概念。</p>
+<p lang="en">The model below is extremely basic: it has read only six sentences, and it looks at just the last character to guess the next one. But the idea is the same as in a real language model. (The training text is Chinese; the mechanism doesn't depend on the language.)</p>
+<div class="demo" id="nextCharDemo">
+  <div class="demo-head"><span class="tag">demo</span><h3><span lang="zh-Hant">猜下一個字</span><span lang="en">Guess the next character</span></h3></div>
+  <div class="demo-body">
+    <details style="margin-bottom:.6rem"><summary style="cursor:pointer;font-size:.9rem"><span lang="zh-Hant">模型讀過的六句話（訓練資料）</span><span lang="en">The six sentences it has read (training data)</span></summary><ol id="ncCorpus" style="font-size:.9rem"></ol></details>
+    <div class="row">
+      <label style="font-size:.9rem"><span lang="zh-Hant">開頭：</span><span lang="en">Start:</span>
+        <select id="ncStart"><option>今天</option><option>明天</option><option>我們</option><option>咖啡</option></select></label>
+    </div>
+    <div style="font-size:1.6rem;letter-spacing:.06em;margin:.6rem 0;min-height:2.4rem" id="ncText" aria-live="polite"></div>
+    <p class="hint" lang="zh-Hant">下一個字可能是（點一下接上去）：</p>
+    <p class="hint" lang="en">The next character could be (click to add it):</p>
+    <div class="row" id="ncCands"></div>
+    <div id="ncNote" style="min-height:1.6rem;margin:.4rem 0"></div>
+    <div class="row">
+      <button class="btn primary" id="ncAuto" type="button"><span lang="zh-Hant">讓它自己寫完</span><span lang="en">Let it finish</span></button>
+      <button class="btn" id="ncReset" type="button"><span lang="zh-Hant">重來</span><span lang="en">Reset</span></button>
+    </div>
+  </div>
+</div>
+<p lang="zh-Hant">多按幾次「讓它自己寫完」，你會發現兩件事：</p>
+<p lang="en">Press "Let it finish" a few times and you'll notice two things:</p>
+<ol lang="zh-Hant">
+  <li><strong>每次結果可能不一樣。</strong>模型是「依機率抽」下一個字，不是每次都選第一名。真正的 AI 也是這樣，所以同一個問題問兩次，答案可能不同。</li>
+  <li><strong>它會寫出沒讀過的句子</strong>，例如「今天天氣很熱，我們在家喝咖啡。」這句話很通順，但訓練資料裡從來沒有。它不是在「查資料」，而是在「拼出聽起來合理的句子」。</li>
+</ol>
+<ol lang="en">
+  <li><strong>The result can differ every time.</strong> The model samples the next character by probability instead of always taking the top one. Real AI works the same way, which is why the same question can get different answers.</li>
+  <li><strong>It writes sentences it has never read</strong>, such as "It's hot today, let's have coffee at home." Fluent, but never in the training data. It isn't looking anything up; it is assembling text that sounds plausible.</li>
+</ol>
+
+<h2 id="hallucination"><span lang="zh-Hant">為什麼 AI 會一本正經地說錯話</span><span lang="en">Why AI says wrong things so confidently</span></h2>
+<p lang="zh-Hant">第二點很重要。語言模型學到的是「什麼樣的文字聽起來通順、合理」，而不是「什麼是真的」。大多數時候兩者一致，所以它看起來很博學；但當它不知道答案時，它不會自動說「我不知道」，而是照樣接出一段<strong>聽起來很對</strong>的話。這種現象叫做「幻覺」（hallucination）。</p>
+<p lang="en">That second point matters. A language model learns what text sounds fluent and plausible, not what is true. Most of the time those coincide, so it seems knowledgeable; but when it doesn't know, it doesn't automatically say "I don't know". It continues with something that <strong>sounds right</strong>. This is called hallucination.</p>
+<div class="callout warn">
+  <span class="label"><span lang="zh-Hant">記住</span><span lang="en">Remember</span></span>
+  <p lang="zh-Hant">AI 說得很有自信，不代表它是對的。重要的事（數字、日期、法規、程式碼能不能跑）一定要查證。後面幾章會教你怎麼用程式自動幫你檢查。</p>
+  <p lang="en">Sounding confident doesn't make the AI right. Check anything important (numbers, dates, regulations, whether code runs). Later chapters show how to have code check for you automatically.</p>
+</div>
+
+<h2 id="knows"><span lang="zh-Hant">它知道什麼、不知道什麼</span><span lang="en">What it knows and doesn't</span></h2>
+<div class="grid">
+  <div class="card"><h3><span lang="zh-Hant">通常知道</span><span lang="en">Usually knows</span></h3>
+    <p lang="zh-Hant">公開的常識、程式語言、常見的寫作方式、訓練資料截止日期之前的公開資訊。</p>
+    <p lang="en">Public general knowledge, programming languages, common writing styles, public information up to its training cutoff.</p></div>
+  <div class="card"><h3><span lang="zh-Hant">不知道（除非你告訴它）</span><span lang="en">Doesn't know (unless you tell it)</span></h3>
+    <p lang="zh-Hant">你們公司的內部規定、你的客戶資料、今天的日期、最新的新聞、你上一次跟它說過什麼。</p>
+    <p lang="en">Your company's internal rules, your customer data, today's date, the latest news, what you told it last time.</p></div>
+</div>
+<p lang="zh-Hant">右邊那一欄，就是工程師要用程式補上的部分：第 2 章教你怎麼把對話送給它，第 4 章教你怎麼把公司文件給它看。</p>
+<p lang="en">The right-hand column is what engineers fill in with code: chapter B2 covers sending it the conversation, and B4 covers giving it your company's documents.</p>
+
+<h2 id="tokens"><span lang="zh-Hant">兩個一定會遇到的詞：token 與 context window</span><span lang="en">Two words you'll meet everywhere: tokens and the context window</span></h2>
+<h3>Token</h3>
+<p lang="zh-Hant">我們的迷你模型一次猜「一個字」。真正的模型一次猜的是一個 <strong>token</strong>：可能是一個字、半個英文單字，或一個標點。你可以把 token 想成模型讀寫文字的「最小單位」。它重要的原因很實際：<strong>AI 服務是依照 token 數量收費的</strong>，長度限制也是用 token 計算。一段文字大約是多少 token，依模型與語言而不同。</p>
+<p lang="en">Our mini model guesses one character at a time. A real model guesses one <strong>token</strong> at a time: a word, part of a word, or a punctuation mark. Think of tokens as the model's smallest unit of reading and writing. They matter for a practical reason: <strong>AI services charge by the token</strong>, and length limits are counted in tokens too. How many tokens a piece of text takes depends on the model and the language.</p>
+<h3>Context window</h3>
+<p lang="zh-Hant">模型每次回答時，能「看到」的文字有上限，這個上限叫 <strong>context window</strong>（上下文視窗）。可以把它想成模型的「工作記憶」：你的問題、之前的對話、你貼給它的文件，全部加起來都要放得進去。現在的模型可以一次看非常多文字，但放得越多，每次的費用越高、速度也越慢。</p>
+<p lang="en">Each time a model answers, there's a limit on how much text it can "see": the <strong>context window</strong>. Think of it as working memory: your question, the earlier conversation and any documents you pasted all have to fit. Modern models can take in a great deal of text, but the more you include, the more each request costs and the slower it gets.</p>
+
+<h2 id="code"><span lang="zh-Hant">看看程式碼（選讀）</span><span lang="en">Look at the code (optional)</span></h2>
+<p lang="zh-Hant">迷你模型的 Python 版本只有幾十行。核心就是「數一數每個字後面接過哪些字」：</p>
+<p lang="en">The Python version of the mini model is a few dozen lines. The core is counting which characters followed each character:</p>
+<figure class="code"><figcaption><span>labs/beginner/next_word.py</span></figcaption>
+<pre><code class="language-python">def train(sentences):
+    """數一數：每個字後面，出現過哪些字、各幾次。"""
+    counts = defaultdict(Counter)
+    for sentence in sentences:
+        for current_char, next_char in zip(sentence, sentence[1:]):
+            counts[current_char][next_char] += 1
+    return counts
+
+
+def next_char_probabilities(counts, text):
+    """看最後一個字，算出下一個字的機率。"""
+    last_char = text[-1]
+    followers = counts.get(last_char)
+    if not followers:
+        return {}
+    total = sum(followers.values())
+    return {char: n / total for char, n in followers.most_common()}</code></pre>
+</figure>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash">python -m labs.beginner.next_word</code></pre>
+</figure>
+<p lang="zh-Hant">真正的模型和它差在哪？它不只看最後一個字，而是看前面一大段文字；它不是數次數，而是用神經網路學出非常複雜的規律。但「猜下一個、接上去、再猜」這個流程是一樣的。</p>
+<p lang="en">How does a real model differ? It looks at a long stretch of preceding text, not just the last character, and instead of counting it learns very complex patterns with a neural network. But the loop of "guess the next one, append it, guess again" is the same.</p>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">1. 語言模型產生回答的方式，最接近下面哪一個？</span><span lang="en">1. Which is closest to how a language model produces an answer?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">在資料庫裡搜尋正確答案，再顯示出來。</span><span lang="en">It searches a database for the correct answer and displays it.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">一次猜一個最可能的下一個字（token），接上去後再繼續猜。</span><span lang="en">It guesses the most likely next token, appends it, and keeps going.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">從網路上即時複製別人寫好的答案。</span><span lang="en">It copies someone else's answer from the web in real time.</span></span></label>
+    <div class="explain" lang="zh-Hant">模型本身不會去查資料庫或上網，它是根據學到的規律，一個 token 一個 token 地產生文字。</div>
+    <div class="explain" lang="en">The model itself doesn't query a database or browse the web; it generates text token by token from the patterns it learned.</div>
+  </fieldset>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">2. AI 很有自信地回答了一個你們公司內部的規定。你應該？</span><span lang="en">2. The AI confidently answers a question about your company's internal policy. You should:</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">相信它，因為它講得很具體。</span><span lang="en">Trust it, because it's very specific.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">再問一次，答案一樣就是對的。</span><span lang="en">Ask again; if the answer matches, it's right.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">去查公司的正式文件確認；除非你把規定給它看過，否則它不可能知道。</span><span lang="en">Check the official document. Unless you gave it the policy, it can't know.</span></span></label>
+    <div class="explain" lang="zh-Hant">內部規定不在它的訓練資料裡。講得具體不代表正確，兩次答案一樣也可能兩次都是編的。</div>
+    <div class="explain" lang="en">Internal policies aren't in its training data. Specific doesn't mean correct, and two matching answers can both be invented.</div>
+  </fieldset>
+  <fieldset data-answer="a">
+    <legend><span lang="zh-Hant">3. 為什麼工程師要在意 token 數量？</span><span lang="en">3. Why do engineers care about token counts?</span></legend>
+    <label><input type="radio" name="q3" value="a"><span><span lang="zh-Hant">因為費用和長度限制都是用 token 計算的。</span><span lang="en">Because cost and length limits are both measured in tokens.</span></span></label>
+    <label><input type="radio" name="q3" value="b"><span><span lang="zh-Hant">因為 token 越多，答案一定越正確。</span><span lang="en">Because more tokens always means a more correct answer.</span></span></label>
+    <label><input type="radio" name="q3" value="c"><span><span lang="zh-Hant">不需要在意，那是 AI 公司的事。</span><span lang="en">They don't need to; that's the AI company's concern.</span></span></label>
+    <div class="explain" lang="zh-Hant">送出與收到的 token 都會計費，而且每次能放進 context window 的量有上限。</div>
+    <div class="explain" lang="en">Tokens sent and received are both billed, and there's a cap on how many fit in the context window.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

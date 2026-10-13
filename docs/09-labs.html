@@ -38,8 +38,34 @@ python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-python -m pytest                   # 58 passed</code></pre>
+python -m pytest                   # 66 passed</code></pre>
 </figure>
+
+<h2 id="lab-basics"><span lang="zh-Hant">入門篇練習</span><span lang="en">Basics exercises</span></h2>
+<p lang="zh-Hant">對應入門篇 B1 到 B5。每個檔案都很短、沒有 class，可以直接讀懂。</p>
+<p lang="en">Covers basics chapters B1–B5. Each file is short, has no classes, and reads top to bottom.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">檔案</span><span lang="en">File</span></th><th><span lang="zh-Hant">內容</span><span lang="en">Contents</span></th><th><span lang="zh-Hant">執行</span><span lang="en">Run</span></th></tr></thead>
+  <tbody>
+    <tr><td><code>next_word.py</code></td><td><span lang="zh-Hant">只讀過六句話的「猜下一個字」模型（B1）</span><span lang="en">A next-character model trained on six sentences (B1)</span></td><td><code>python -m labs.beginner.next_word</code></td></tr>
+    <tr><td><code>first_call.py</code></td><td><span lang="zh-Hant">第一次呼叫 API，看對話歷史怎麼累積（B2）</span><span lang="en">A first API call; watch the history accumulate (B2)</span></td><td><code>python -m labs.beginner.first_call</code></td></tr>
+    <tr><td><code>handbook_qa.py</code></td><td><span lang="zh-Hant">搜尋員工手冊並組合 prompt（B4）</span><span lang="en">Search a handbook and assemble a prompt (B4)</span></td><td><code>python -m labs.beginner.handbook_qa "問題"</code></td></tr>
+    <tr><td><code>check_answers.py</code></td><td><span lang="zh-Hant">會自動閱卷的考卷（B5）</span><span lang="en">An exam that grades itself (B5)</span></td><td><code>python -m labs.beginner.check_answers</code></td></tr>
+  </tbody>
+</table>
+</div>
+<h3><span lang="zh-Hant">延伸作業</span><span lang="en">Extension exercises</span></h3>
+<ol lang="zh-Hant">
+  <li>在 <code>next_word.py</code> 的訓練資料加入五句你自己寫的話，觀察生成結果怎麼改變。</li>
+  <li>在 <code>handbook_qa.py</code> 加一個「同義詞表」（例如「筆電」→「筆記型電腦」），讓考卷的第 5 題通過。</li>
+  <li>在 <code>check_answers.py</code> 加三題考題，其中一題是陷阱題。</li>
+</ol>
+<ol lang="en">
+  <li>Add five sentences of your own to the training data in <code>next_word.py</code> and watch how the output changes.</li>
+  <li>Add a synonym table to <code>handbook_qa.py</code> (e.g. 筆電 → 筆記型電腦) so exam question 5 passes.</li>
+  <li>Add three questions to <code>check_answers.py</code>, including one trick question.</li>
+</ol>
 
 <h2 id="lab-core"><span lang="zh-Hant">練習 1：核心模式</span><span lang="en">Lab 1: core patterns</span></h2>
 <p lang="zh-Hant">對應第 4 到 7 章。每個模組都可以單獨執行，看看它在做什麼。</p>

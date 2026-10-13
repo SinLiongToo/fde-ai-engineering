@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="b3-prompting"
+  data-title-zh="B3 把話說清楚：寫 prompt · AI 工程實戰課"
+  data-title-en="B3 Saying it clearly: prompts · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B3 把話說清楚：寫 prompt · AI 工程實戰課</title>
+<meta name="description" content="入門篇第 3 章：把 AI 當成聰明但不了解狀況的新同事。用互動示範學會在 prompt 裡給背景、細節、格式，以及允許它說不知道。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="assets/site.js"></script>
+<script defer src="assets/demos/basics.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">入門篇 · 第 3 章</span><span lang="en">Basics · Chapter 3</span></div>
+<h1><span lang="zh-Hant">把話說清楚：寫 prompt</span><span lang="en">Saying it clearly: prompts</span></h1>
+<p class="lede" lang="zh-Hant">prompt 就是你給 AI 的指示。很多人以為寫 prompt 需要什麼神秘咒語，其實不用。最大的秘訣只有一個：把它當成一位很聰明、但完全不了解你狀況的新同事。</p>
+<p class="lede" lang="en">A prompt is the instruction you give the AI. Many people assume prompts need some secret incantation. They don't. The biggest secret is this: treat the AI as a very smart new colleague who knows nothing about your situation.</p>
+<div class="meta"><span>⏱ 15 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">讀完這章你會知道</span><span lang="en">After this chapter you'll know</span></h2>
+  <ul lang="zh-Hant">
+    <li>為什麼同樣的 AI，有人用起來很好，有人覺得很笨。</li>
+    <li>一個好 prompt 通常包含的六個部分。</li>
+    <li>幾個常見的誤解，以及怎麼一步步改進 prompt。</li>
+  </ul>
+  <ul lang="en">
+    <li>Why the same AI seems brilliant to some people and dumb to others.</li>
+    <li>The six parts a good prompt usually contains.</li>
+    <li>A few common misconceptions, and how to improve a prompt step by step.</li>
+  </ul>
+</section>
+
+<h2 id="colleague"><span lang="zh-Hant">新同事原則</span><span lang="en">The new-colleague rule</span></h2>
+<div class="callout tip">
+  <span class="label"><span lang="zh-Hant">一句話重點</span><span lang="en">Key point</span></span>
+  <p lang="zh-Hant"><strong>你沒說的事，AI 只能用猜的。猜錯了，不是它笨，是你沒給它需要的資訊。</strong></p>
+  <p lang="en"><strong>Whatever you don't say, the AI has to guess. When it guesses wrong, it isn't stupid; you didn't give it what it needed.</strong></p>
+</div>
+<p lang="zh-Hant">如果你跟一位剛到職的同事說「幫我寫一封請假信」，他一定會問：寫給誰？請哪幾天？為什麼？要多正式？AI 也有一樣的疑問，只是它通常<strong>不會問</strong>，而是自己挑一個答案繼續寫。結果就是一封很通順、但不是你要的信。</p>
+<p lang="en">Tell a new colleague "write a leave request for me" and they'll ask: to whom? Which days? Why? How formal? The AI has the same questions, but it usually <strong>doesn't ask</strong>; it picks an answer and carries on. The result is a fluent letter that isn't what you wanted.</p>
+
+<h2 id="demo"><span lang="zh-Hant">動手試：一步步把 prompt 補完整</span><span lang="en">Try it: complete the prompt step by step</span></h2>
+<div class="demo" id="promptDemo">
+  <div class="demo-head"><span class="tag">demo</span><h3><span lang="zh-Hant">請假信 prompt</span><span lang="en">Leave-request prompt</span></h3></div>
+  <div class="demo-body">
+    <p class="hint" lang="zh-Hant">勾選要加進 prompt 的部分。右邊會列出 AI 還得自己猜的事。</p>
+    <p class="hint" lang="en">Tick the parts to add to the prompt. The list shows what the AI still has to guess.</p>
+    <div id="pbChecks" style="display:grid;gap:.35rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))"></div>
+    <div class="row">
+      <button class="btn" id="pbAll" type="button"><span lang="zh-Hant">全部勾選</span><span lang="en">Select all</span></button>
+      <button class="btn ghost" id="pbNone" type="button"><span lang="zh-Hant">全部取消</span><span lang="en">Clear</span></button>
+    </div>
+    <div class="cols">
+      <div class="col"><h4>Prompt</h4><pre id="pbPrompt" style="white-space:pre-wrap;margin:0;font-size:.88rem;font-family:inherit"></pre></div>
+      <div class="col" id="pbGaps" style="font-size:.9rem"></div>
+    </div>
+  </div>
+</div>
+
+<h2 id="six"><span lang="zh-Hant">好 prompt 的六個部分</span><span lang="en">Six parts of a good prompt</span></h2>
+<p lang="zh-Hant">不是每次都要六個全寫，但寫完一個 prompt 後，用這張表檢查一下有沒有漏掉重要的。</p>
+<p lang="en">You won't need all six every time, but after writing a prompt, check this list for anything important you left out.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">部分</span><span lang="en">Part</span></th><th><span lang="zh-Hant">問自己</span><span lang="en">Ask yourself</span></th><th><span lang="zh-Hant">例子</span><span lang="en">Example</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">背景</span><span lang="en">Context</span></td><td><span lang="zh-Hant">我是誰？給誰看？用在哪裡？</span><span lang="en">Who am I? Who is it for? Where will it be used?</span></td><td><span lang="zh-Hant">「這是要貼在公司內部 wiki 的說明，讀者是新進工程師。」</span><span lang="en">"This goes on our internal wiki; readers are new engineers."</span></td></tr>
+    <tr><td><span lang="zh-Hant">任務</span><span lang="en">Task</span></td><td><span lang="zh-Hant">我到底要它做什麼？</span><span lang="en">What exactly should it do?</span></td><td><span lang="zh-Hant">「把下面的會議紀錄整理成待辦事項。」</span><span lang="en">"Turn these meeting notes into action items."</span></td></tr>
+    <tr><td><span lang="zh-Hant">細節與素材</span><span lang="en">Details and material</span></td><td><span lang="zh-Hant">它需要哪些事實才做得到？</span><span lang="en">What facts does it need?</span></td><td><span lang="zh-Hant">貼上會議紀錄全文、日期、參與者名單。</span><span lang="en">Paste the full notes, the date, the attendee list.</span></td></tr>
+    <tr><td><span lang="zh-Hant">格式</span><span lang="en">Format</span></td><td><span lang="zh-Hant">結果要長什麼樣子？多長？</span><span lang="en">What should the result look like? How long?</span></td><td><span lang="zh-Hant">「條列式，每項包含負責人與期限，最多 10 項。」</span><span lang="en">"Bullets, each with owner and deadline, at most 10."</span></td></tr>
+    <tr><td><span lang="zh-Hant">範例</span><span lang="en">Example</span></td><td><span lang="zh-Hant">有沒有一個「我要的就是這樣」的例子？</span><span lang="en">Is there an example of exactly what you want?</span></td><td><span lang="zh-Hant">「格式像這樣：- [王小明] 更新報價單（11/20 前）」</span><span lang="en">"Like this: - [Wang] update the quote (by 11/20)"</span></td></tr>
+    <tr><td><span lang="zh-Hant">不知道時</span><span lang="en">When unsure</span></td><td><span lang="zh-Hant">資訊不夠時，要它怎麼做？</span><span lang="en">What should it do when information is missing?</span></td><td><span lang="zh-Hant">「如果某項沒有負責人，標示『待確認』，不要自己指派。」</span><span lang="en">"If an item has no owner, mark it 'TBC'; don't assign one yourself."</span></td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout note">
+  <span class="label"><span lang="zh-Hant">最常被忽略的是最後一項</span><span lang="en">The most overlooked is the last one</span></span>
+  <p lang="zh-Hant">還記得第 1 章說的嗎？AI 不知道答案時，傾向於編一個聽起來對的。明確告訴它「不知道就說不知道」或「先問我」，是減少胡說八道最簡單的方法。</p>
+  <p lang="en">Remember chapter B1? When the AI doesn't know, it tends to invent something plausible. Telling it explicitly "say so if you don't know" or "ask me first" is the simplest way to reduce made-up answers.</p>
+</div>
+
+<h2 id="before-after"><span lang="zh-Hant">改寫前後對照</span><span lang="en">Before and after</span></h2>
+<div class="grid">
+  <div class="card"><span class="kicker"><span lang="zh-Hant">改寫前</span><span lang="en">Before</span></span>
+    <p lang="zh-Hant">「幫我解釋這段程式碼。」</p>
+    <p lang="en">"Explain this code."</p></div>
+  <div class="card"><span class="kicker"><span lang="zh-Hant">改寫後</span><span lang="en">After</span></span>
+    <p lang="zh-Hant">「我剛學 Python 兩個月，看得懂 for 迴圈和函式，但沒學過 class。請逐行解釋下面這段程式在做什麼，遇到我沒學過的語法時多解釋一點。最後用一句話總結它的用途。」＋ 貼上程式碼</p>
+    <p lang="en">"I've been learning Python for two months; I understand for loops and functions but not classes. Explain line by line what the code below does, spending more time on syntax I haven't learned. End with a one-sentence summary of its purpose." + the code</p></div>
+</div>
+<div class="grid">
+  <div class="card"><span class="kicker"><span lang="zh-Hant">改寫前</span><span lang="en">Before</span></span>
+    <p lang="zh-Hant">「這個錯誤怎麼修？」＋ 錯誤訊息</p>
+    <p lang="en">"How do I fix this error?" + the error message</p></div>
+  <div class="card"><span class="kicker"><span lang="zh-Hant">改寫後</span><span lang="en">After</span></span>
+    <p lang="zh-Hant">「我在 Windows 上用 Python 3.12 執行下面的程式，出現這個錯誤。我已經試過重新安裝套件，沒有用。請先說明錯誤的原因，再給我修改方式。」＋ 程式碼 ＋ 完整錯誤訊息</p>
+    <p lang="en">"I'm running the code below with Python 3.12 on Windows and get this error. Reinstalling the package didn't help. First explain the cause, then show me the fix." + the code + the full error message</p></div>
+</div>
+
+<h2 id="myths"><span lang="zh-Hant">常見誤解</span><span lang="en">Common misconceptions</span></h2>
+<ul lang="zh-Hant">
+  <li><strong>「要先說『你是世界頂尖的專家』才會變聰明。」</strong>角色設定能幫它決定語氣與觀點，但影響有限。給它具體的資訊比給它頭銜有用得多。</li>
+  <li><strong>「prompt 越長越好。」</strong>重點是完整，不是長。和任務無關的內容反而會讓它分心。</li>
+  <li><strong>「寫一次就要完美。」</strong>寫 prompt 和寫程式一樣：寫、試、看結果、改。結果不對時，先問自己「它缺了什麼資訊？」</li>
+  <li><strong>「AI 回答錯了，就是 AI 不行。」</strong>先檢查是不是 prompt 沒說清楚；如果說清楚了還是錯，才是模型的限制（這時就需要後面幾章的方法）。</li>
+</ul>
+<ul lang="en">
+  <li><strong>"Start with 'You are a world-class expert' to make it smarter."</strong> A role helps with tone and perspective, but its effect is limited. Concrete information beats a title by far.</li>
+  <li><strong>"Longer prompts are better."</strong> Complete, not long. Irrelevant content can distract it.</li>
+  <li><strong>"It must be perfect on the first try."</strong> Prompts are like code: write, test, look at the result, revise. When the result is wrong, first ask "what information was it missing?"</li>
+  <li><strong>"A wrong answer means the AI is bad."</strong> First check whether the prompt was clear. If it was and the answer is still wrong, that's a model limitation, and later chapters cover what to do about it.</li>
+</ul>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">1. 你請 AI 摘要一份報告，結果它寫了 800 字，你只想要三句話。最好的改法是？</span><span lang="en">1. You asked for a summary and got 800 words when you wanted three sentences. Best fix?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">換一個 AI 試試看。</span><span lang="en">Try a different AI.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">在 prompt 裡寫清楚「用三句話摘要，給主管看」。</span><span lang="en">Say in the prompt: "summarise in three sentences, for my manager".</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">在 prompt 開頭加上「你是世界頂尖的摘要專家」。</span><span lang="en">Add "You are the world's best summariser" at the start.</span></span></label>
+    <div class="explain" lang="zh-Hant">長度與讀者是它猜不到的資訊。直接說出來最有效。</div>
+    <div class="explain" lang="en">Length and audience are things it can't guess. Saying them directly works best.</div>
+  </fieldset>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">2. 要減少 AI 編造答案，prompt 裡最直接有用的一句是？</span><span lang="en">2. To reduce made-up answers, the most directly useful line in a prompt is:</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">「請務必回答正確。」</span><span lang="en">"Please be sure to answer correctly."</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">「請盡量詳細。」</span><span lang="en">"Please be as detailed as possible."</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">「如果提供的資料裡沒有答案，請直接說不知道。」</span><span lang="en">"If the answer isn't in the material provided, just say you don't know."</span></span></label>
+    <div class="explain" lang="zh-Hant">給它一個明確的「出口」。要求「正確」不會讓它知道它不知道的事；要求「詳細」反而可能讓它編更多。</div>
+    <div class="explain" lang="en">Give it an explicit way out. Asking for correctness doesn't tell it what it doesn't know, and asking for detail may make it invent more.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

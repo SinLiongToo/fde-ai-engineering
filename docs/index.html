@@ -25,83 +25,88 @@
 <article class="content">
 
 <section class="hero">
-  <div class="eyebrow"><span lang="zh-Hant">給有經驗的軟體工程師</span><span lang="en">For experienced software engineers</span></div>
+  <div class="eyebrow"><span lang="zh-Hant">從入門到上線</span><span lang="en">From first steps to production</span></div>
   <h1>
     <span lang="zh-Hant">AI 工程實戰：把 LLM 系統做到能上線</span>
     <span lang="en">AI engineering: getting LLM systems to production</span>
   </h1>
-  <p class="lede" lang="zh-Hant">
-    前線部署工程師（Forward Deployed Engineer，FDE）的工作，是進到客戶的環境裡，把模糊的需求變成真的在跑、有人在用、出事時查得出原因的系統。這門課整理這個角色最常用到的工程方法：結構化輸出、檢索、Agent、評測與上線。每一章都對應一段可以在本機執行的 Python 程式。
-  </p>
-  <p class="lede" lang="en">
-    A Forward Deployed Engineer (FDE) goes into a customer's environment and turns a vague request into a system that
-    runs, gets used, and can be debugged when it breaks. This course covers the engineering methods the role relies on
-    most: structured output, retrieval, agents, evaluation and production operations. Every chapter maps to Python code
-    you can run locally.
-  </p>
+  <p class="lede" lang="zh-Hant">這門課分兩部分。<strong>入門篇</strong>給會一點程式、但沒做過 AI 的人：用白話和可以親手操作的示範，搞懂 AI 應用是怎麼運作的。<strong>進階篇</strong>給想把系統做到正式上線的工程師：前線部署工程師（FDE）在客戶環境中最常用到的方法。每一章都附可以在本機執行的 Python 程式。</p>
+  <p class="lede" lang="en">The course has two parts. <strong>Basics</strong> is for people who can code a little but have never built with AI: plain language and hands-on demos that explain how AI applications work. The <strong>core course</strong> is for engineers who want to ship to production: the methods Forward Deployed Engineers (FDEs) use most in customer environments. Every chapter comes with Python code you can run locally.</p>
   <div class="cta">
-    <a class="btn primary" href="01-fde-role.html"><span lang="zh-Hant">從第 1 章開始</span><span lang="en">Start with chapter 1</span></a>
-    <a class="btn" href="#assess"><span lang="zh-Hant">先做自我評估</span><span lang="en">Take the self-assessment</span></a>
-    <a class="btn" href="09-labs.html"><span lang="zh-Hant">直接看練習</span><span lang="en">Go to the labs</span></a>
+    <a class="btn primary" href="b1-what-is-llm.html"><span lang="zh-Hant">我是初學者：從入門篇開始</span><span lang="en">I'm new: start with the basics</span></a>
+    <a class="btn" href="01-fde-role.html"><span lang="zh-Hant">我有經驗：從進階篇開始</span><span lang="en">I'm experienced: start the core course</span></a>
+    <a class="btn" href="#assess"><span lang="zh-Hant">不確定？做自我評估</span><span lang="en">Not sure? Take the self-assessment</span></a>
   </div>
 </section>
 
-<h2 id="who"><span lang="zh-Hant">這門課適合誰</span><span lang="en">Who this is for</span></h2>
-<div lang="zh-Hant">
-  <p>你已經會寫正式環境的程式：懂 HTTP API、SQL、Git、測試與部署，也用過 LLM API 或 ChatGPT 之類的工具。你想知道的是：<strong>怎麼把一個 demo 做成客戶願意簽收、維運團隊接得住的系統</strong>。</p>
-  <p>這門課不會教 Python 語法、機器學習理論或模型訓練。它假設你用現成的模型 API，把力氣花在模型周圍的工程上。</p>
+<h2 id="who"><span lang="zh-Hant">我該從哪裡開始</span><span lang="en">Where should I start?</span></h2>
+<div class="grid">
+  <a class="card" href="b1-what-is-llm.html"><span class="kicker"><span lang="zh-Hant">入門篇 · 5 章 · 約 75 分鐘</span><span lang="en">Basics · 5 chapters · ~75 min</span></span>
+    <h3><span lang="zh-Hant">會一點程式，沒做過 AI</span><span lang="en">You code a little, never built with AI</span></h3>
+    <p lang="zh-Hant">寫過簡單的 Python，但聽到 LLM、API、token、RAG 就頭痛。不需要安裝任何東西，在瀏覽器裡就能動手試。</p>
+    <p lang="en">You've written simple Python, but LLM, API, token and RAG make your head spin. Nothing to install: you can try everything in the browser.</p></a>
+  <a class="card" href="01-fde-role.html"><span class="kicker"><span lang="zh-Hant">進階篇 · 9 章 · 約 4 小時</span><span lang="en">Core course · 9 chapters · ~4 h</span></span>
+    <h3><span lang="zh-Hant">已經在寫正式環境的程式</span><span lang="en">You already ship production code</span></h3>
+    <p lang="zh-Hant">懂 HTTP API、SQL、Git、測試與部署，想知道怎麼把 AI 的 demo 做成客戶願意簽收、維運團隊接得住的系統。</p>
+    <p lang="en">You know HTTP APIs, SQL, Git, testing and deployment, and want to turn AI demos into systems customers sign off on and ops teams can run.</p></a>
 </div>
-<div lang="en">
-  <p>You already ship production code: you know HTTP APIs, SQL, Git, testing and deployment, and you have used an LLM API
-  or a chat assistant. What you want to learn is <strong>how to turn a demo into a system a customer will sign off on and an
-  operations team can run</strong>.</p>
-  <p>This course does not teach Python syntax, ML theory or model training. It assumes you call hosted model APIs and
-  spend your effort on the engineering around them.</p>
-</div>
+<p lang="zh-Hant">這門課不教 Python 語法、機器學習理論或模型訓練。它假設你用現成的模型 API，把力氣花在模型周圍的工程上。遇到看不懂的名詞，可以查<a href="glossary.html">詞彙表</a>。</p>
+<p lang="en">The course doesn't teach Python syntax, ML theory or model training. It assumes you call hosted model APIs and spend your effort on the engineering around them. Unfamiliar term? Check the <a href="glossary.html">glossary</a>.</p>
 
 <h2 id="map"><span lang="zh-Hant">課程地圖</span><span lang="en">Course map</span></h2>
-<p lang="zh-Hant">前三章談「工作方式」，第 4 到 8 章談「系統怎麼做」，第 9 章是練習與延伸閱讀。第 4 到 7 章依序建立在前一章之上，建議照順序讀。</p>
-<p lang="en">Chapters 1–3 cover how the work is done, 4–8 cover how the system is built, and 9 collects the labs and further reading. Chapters 4–7 build on each other, so read them in order.</p>
+<p lang="zh-Hant">入門篇的每一章，在進階篇都有對應的深入章節。讀完入門篇，可以直接接進階篇。</p>
+<p lang="en">Every basics chapter has a deeper counterpart in the core course, so you can go straight from one to the other.</p>
 
-<div class="diagram" role="img" aria-label="Course structure diagram">
-  <svg viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg">
+<div class="diagram" role="img" aria-label="Course structure: basics B1 to B5 lead into the core course chapters 1 to 9">
+  <svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
     <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
-    <rect class="box" x="10" y="20" width="200" height="190" rx="10"/>
-    <text x="110" y="45" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">工作方式</tspan><tspan lang="en">How you work</tspan></text>
-    <text x="30" y="85">01 FDE</text><text x="30" y="120">02 <tspan lang="zh-Hant">交付流程</tspan><tspan lang="en">Engagement</tspan></text><text x="30" y="155">03 Coding agents</text>
+    <rect class="box" x="10" y="20" width="170" height="210" rx="10"/>
+    <text x="95" y="45" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">入門篇</tspan><tspan lang="en">Basics</tspan></text>
+    <text x="26" y="80">B1 <tspan lang="zh-Hant">語言模型</tspan><tspan lang="en">LLMs</tspan></text>
+    <text x="26" y="110">B2 <tspan lang="zh-Hant">呼叫 API</tspan><tspan lang="en">API calls</tspan></text>
+    <text x="26" y="140">B3 Prompt</text>
+    <text x="26" y="170">B4 <tspan lang="zh-Hant">你的文件</tspan><tspan lang="en">Your docs</tspan></text>
+    <text x="26" y="200">B5 <tspan lang="zh-Hant">簡單測試</tspan><tspan lang="en">Simple tests</tspan></text>
 
-    <rect class="box accent" x="250" y="20" width="300" height="190" rx="10"/>
-    <text x="400" y="45" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">系統怎麼做</tspan><tspan lang="en">How the system is built</tspan></text>
-    <text x="270" y="85">04 <tspan lang="zh-Hant">結構化輸出</tspan><tspan lang="en">Structured output</tspan></text>
-    <text x="270" y="115">05 <tspan lang="zh-Hant">檢索</tspan><tspan lang="en">Retrieval</tspan></text>
-    <text x="270" y="145">06 Agents</text>
-    <text x="270" y="175">07 Evals</text>
-    <text x="420" y="130">08 <tspan lang="zh-Hant">上線</tspan><tspan lang="en">Production</tspan></text>
-    <path class="edge accent" d="M360 115 C 390 115, 395 125, 415 126" marker-end="url(#ah)"/>
-    <path class="edge accent" d="M340 172 C 390 172, 395 140, 415 133" marker-end="url(#ah)"/>
+    <rect class="box" x="215" y="20" width="150" height="210" rx="10"/>
+    <text x="290" y="45" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">工作方式</tspan><tspan lang="en">How you work</tspan></text>
+    <text x="230" y="95">01 FDE</text>
+    <text x="230" y="130">02 <tspan lang="zh-Hant">交付流程</tspan><tspan lang="en">Engagement</tspan></text>
+    <text x="230" y="165">03 Coding agents</text>
 
-    <rect class="box" x="590" y="20" width="120" height="190" rx="10"/>
-    <text x="650" y="45" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">練習</tspan><tspan lang="en">Practice</tspan></text>
-    <text x="650" y="110" text-anchor="middle">09 Labs</text>
-    <text x="650" y="135" text-anchor="middle" class="muted">3 labs</text>
-    <path class="edge" d="M210 115 L 248 115" marker-end="url(#ah)"/>
-    <path class="edge" d="M550 115 L 588 115" marker-end="url(#ah)"/>
+    <rect class="box accent" x="400" y="20" width="185" height="210" rx="10"/>
+    <text x="492" y="45" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">系統怎麼做</tspan><tspan lang="en">Building it</tspan></text>
+    <text x="415" y="80">04 <tspan lang="zh-Hant">結構化輸出</tspan><tspan lang="en">Structured output</tspan></text>
+    <text x="415" y="110">05 <tspan lang="zh-Hant">檢索</tspan><tspan lang="en">Retrieval</tspan></text>
+    <text x="415" y="140">06 Agents</text>
+    <text x="415" y="170">07 Evals</text>
+    <text x="415" y="200">08 <tspan lang="zh-Hant">上線</tspan><tspan lang="en">Production</tspan></text>
+
+    <rect class="box" x="620" y="20" width="90" height="210" rx="10"/>
+    <text x="665" y="45" text-anchor="middle" font-weight="700"><tspan lang="zh-Hant">練習</tspan><tspan lang="en">Practice</tspan></text>
+    <text x="665" y="125" text-anchor="middle">09 Labs</text>
+    <path class="edge" d="M180 125 L 213 125" marker-end="url(#ah)"/>
+    <path class="edge" d="M365 125 L 398 125" marker-end="url(#ah)"/>
+    <path class="edge" d="M585 125 L 618 125" marker-end="url(#ah)"/>
   </svg>
 </div>
 
+<h3><span lang="zh-Hant">入門篇</span><span lang="en">Basics</span></h3>
+<ol class="chapter-list" id="basicsList"></ol>
+<h3><span lang="zh-Hant">進階篇</span><span lang="en">Core course</span></h3>
 <ol class="chapter-list" id="chapterList"></ol>
 
 <h2 id="how"><span lang="zh-Hant">怎麼使用這門課</span><span lang="en">How to use this course</span></h2>
 <ul lang="zh-Hant">
   <li><strong>每章開頭有學習目標</strong>，結尾有小測驗。測驗答錯會顯示說明，不計分。</li>
-  <li><strong>第 4 到 7 章有可以在瀏覽器裡操作的示範</strong>。示範用的是和 Python 練習相同的演算法，不是寫死的動畫。</li>
-  <li><strong>程式碼都在 <code>labs/</code> 資料夾</strong>，完全離線可執行，不需要 API key。安裝方式見<a href="09-labs.html">第 9 章</a>。</li>
+  <li><strong>入門篇每一章，以及進階篇第 4 到 7 章，都有可以在瀏覽器裡操作的示範</strong>。示範用的是和 Python 練習相同的演算法，不是寫死的動畫。</li>
+  <li><strong>程式碼都在 <code>labs/</code> 資料夾</strong>，完全離線可執行，不需要 API key。入門篇的程式在 <code>labs/beginner/</code>。安裝方式見<a href="09-labs.html">第 9 章</a>。</li>
   <li>右上角可以切換中英文與深淺色。閱讀進度存在你的瀏覽器裡。</li>
 </ul>
 <ul lang="en">
   <li><strong>Each chapter opens with learning objectives</strong> and ends with a short quiz. Wrong answers show an explanation; nothing is scored.</li>
-  <li><strong>Chapters 4–7 include in-browser demos</strong> that run the same algorithms as the Python labs, not canned animations.</li>
-  <li><strong>All code lives in <code>labs/</code></strong> and runs offline with no API key. Setup is in <a href="09-labs.html">chapter 9</a>.</li>
+  <li><strong>Every basics chapter, and core chapters 4–7, include in-browser demos</strong> that run the same algorithms as the Python labs, not canned animations.</li>
+  <li><strong>All code lives in <code>labs/</code></strong> and runs offline with no API key. Basics code is in <code>labs/beginner/</code>. Setup is in <a href="09-labs.html">chapter 9</a>.</li>
   <li>Switch language and theme from the top right. Your reading progress is stored in your browser.</li>
 </ul>
 
@@ -170,6 +175,11 @@
 (function () {
   function both(zh, en) { return '<span lang="zh-Hant">' + zh + '</span><span lang="en">' + en + '</span>'; }
   var DESC = {
+    "b1-what-is-llm": ["AI 其實在「猜下一個字」；為什麼它會一本正經地說錯話；token 與 context window。", "AI is guessing the next word; why it says wrong things confidently; tokens and the context window."],
+    "b2-first-api-call": ["API 請求裡有什麼、API key 怎麼保管，以及為什麼 AI 不會記得你。", "What's in an API request, keeping API keys safe, and why the AI doesn't remember you."],
+    "b3-prompting": ["把 AI 當成聰明但不了解狀況的新同事：好 prompt 的六個部分。", "Treat the AI as a smart new colleague who knows nothing: six parts of a good prompt."],
+    "b4-your-documents": ["讓 AI 開書考試：先搜尋、再把相關段落放進 prompt。", "An open-book exam for AI: search first, then put the relevant passages in the prompt."],
+    "b5-is-it-good": ["準備一份考卷，每次修改後重考；自動評分的用處與極限。", "Write an exam and re-run it after every change; what automatic grading can and can't do."],
     "01-fde-role": ["這個角色實際在做什麼、和其他職位差在哪裡，以及需要哪些能力。", "What the role involves day to day, how it differs from adjacent roles, and the skills it needs."],
     "02-engagement": ["從第一次會議到交接：探索、資料、原型、強化、上線，每一步要交出什麼。", "From first meeting to handover: discovery, data, prototype, hardening, launch, and what each step must produce."],
     "03-ai-assisted-dev": ["用 coding agent 加速，但不讓它降低品質：規格、脈絡、小步修改與審查。", "Getting speed from coding agents without losing quality: specs, context, small steps and review."],
@@ -181,16 +191,19 @@
     "09-labs": ["三個可執行的練習、延伸作業，以及值得讀的參考資料。", "Three runnable labs, extension exercises and reading worth your time."]
   };
   function renderList() {
-    var list = document.getElementById("chapterList");
     var chapters = window.FDE_CHAPTERS || [];
     var done = (window.FDE_PROGRESS && window.FDE_PROGRESS()) || {};
-    list.innerHTML = chapters.map(function (c, i) {
-      var d = DESC[c.slug] || ["", ""];
-      return '<li><a href="' + c.slug + '.html"><span class="n">' + String(i + 1).padStart(2, "0") + '</span>' +
-        '<span class="t">' + both(c.zh, c.en) + '</span>' +
-        '<span class="s">' + (done[c.slug] ? both("已讀完 ✓", "Done ✓") : '<span class="muted" style="color:var(--fg-faint)">' + c.min + ' min</span>') + '</span>' +
-        '<span class="d">' + both(d[0], d[1]) + '</span></a></li>';
-    }).join("");
+    function items(part) {
+      return chapters.filter(function (c) { return c.part === part; }).map(function (c) {
+        var d = DESC[c.slug] || ["", ""];
+        return '<li><a href="' + c.slug + '.html"><span class="n">' + c.num + '</span>' +
+          '<span class="t">' + both(c.zh, c.en) + '</span>' +
+          '<span class="s">' + (done[c.slug] ? both("已讀完 ✓", "Done ✓") : '<span style="color:var(--fg-faint)">' + c.min + ' min</span>') + '</span>' +
+          '<span class="d">' + both(d[0], d[1]) + '</span></a></li>';
+      }).join("");
+    }
+    document.getElementById("basicsList").innerHTML = items("basics");
+    document.getElementById("chapterList").innerHTML = items("core");
   }
   var TITLES = {}; (window.FDE_CHAPTERS || []).forEach(function (c) { TITLES[c.slug] = c; });
   function onSubmit(e) {
@@ -206,6 +219,14 @@
     var out = document.getElementById("assessResult");
     if (missing) {
       out.innerHTML = '<p class="recommend">' + both("還有 " + missing + " 題沒有作答。", missing + " question(s) unanswered.") + "</p>";
+      return;
+    }
+    var zeros = weak.filter(function (w) { return w.level === 0; }).length;
+    if (zeros >= 3) {
+      out.innerHTML = '<div class="recommend"><p><strong>' + both("建議從入門篇開始", "Start with the basics") + "</strong></p><p>" +
+        both("你有好幾個面向還在起步階段。先花大約 75 分鐘讀完入門篇（B1–B5），再回來做一次評估，進階篇會好讀很多。",
+             "Several areas are still at the starting point. Spend about 75 minutes on the basics (B1–B5), then retake this assessment; the core course will be much easier.") +
+        '</p><p><a class="btn primary" href="b1-what-is-llm.html">' + both("開始入門篇 →", "Start the basics →") + "</a></p></div>";
       return;
     }
     if (!weak.length) {

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="b4-your-documents"
+  data-title-zh="B4 讓 AI 讀你的文件 · AI 工程實戰課"
+  data-title-en="B4 Answering from your documents · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B4 讓 AI 讀你的文件 · AI 工程實戰課</title>
+<meta name="description" content="入門篇第 4 章：AI 不知道你們公司的規定。用「開書考試」的方式，先搜尋、再把相關段落放進 prompt，讓它根據你的文件回答。附可操作的員工手冊示範。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/demos/basics.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">入門篇 · 第 4 章</span><span lang="en">Basics · Chapter 4</span></div>
+<h1><span lang="zh-Hant">讓 AI 讀你的文件</span><span lang="en">Answering from your documents</span></h1>
+<p class="lede" lang="zh-Hant">「請特休要提前幾天？」直接問 AI，它只能用猜的，因為它沒讀過你們的員工手冊。這一章介紹最常見的解法：讓 AI「開書考試」。這個做法有個專有名詞叫 RAG，但概念非常簡單。</p>
+<p class="lede" lang="en">Ask an AI "how far ahead must I request annual leave?" and it can only guess, because it has never read your employee handbook. This chapter covers the most common fix: an open-book exam. It has a technical name, RAG, but the idea is very simple.</p>
+<div class="meta"><span>⏱ 15 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>labs/beginner/handbook_qa.py</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">讀完這章你會知道</span><span lang="en">After this chapter you'll know</span></h2>
+  <ul lang="zh-Hant">
+    <li>為什麼 AI 不知道你們公司的資料，以及「開書考試」怎麼解決這個問題。</li>
+    <li>RAG 的三個步驟：搜尋、組合、回答。</li>
+    <li>簡單的關鍵字搜尋會在哪裡失敗。</li>
+  </ul>
+  <ul lang="en">
+    <li>Why the AI doesn't know your company's data, and how an open-book exam solves that.</li>
+    <li>The three steps of RAG: search, assemble, answer.</li>
+    <li>Where simple keyword search fails.</li>
+  </ul>
+</section>
+
+<h2 id="open-book"><span lang="zh-Hant">開書考試</span><span lang="en">An open-book exam</span></h2>
+<div class="callout tip">
+  <span class="label"><span lang="zh-Hant">一句話重點</span><span lang="en">Key point</span></span>
+  <p lang="zh-Hant"><strong>先幫 AI 翻到相關的那幾頁，再請它「只根據這幾頁」回答。</strong></p>
+  <p lang="en"><strong>First turn to the relevant pages for the AI, then ask it to answer "using only these pages".</strong></p>
+</div>
+<p lang="zh-Hant">為什麼不把整本手冊都貼給它？如果手冊很短，其實可以。但公司文件常常有幾百份、幾千頁：全部塞進去太貴、太慢，也可能超過 context window（第 1 章）。而且不同的人能看的文件不一樣。所以實務上會先<strong>搜尋</strong>，只把相關的段落交給 AI。</p>
+<p lang="en">Why not paste the whole handbook? If it's short, you can. But company documents often run to hundreds of files and thousands of pages: including everything is too expensive, too slow, and may exceed the context window (chapter B1). Different people may also be allowed to see different documents. So in practice you <strong>search</strong> first and give the AI only the relevant passages.</p>
+
+<ol class="steps">
+  <li><strong><span lang="zh-Hant">搜尋</span><span lang="en">Search</span></strong>
+    <span lang="zh-Hant">從文件中找出和問題最相關的幾段。</span>
+    <span lang="en">Find the few passages most related to the question.</span></li>
+  <li><strong><span lang="zh-Hant">組合</span><span lang="en">Assemble</span></strong>
+    <span lang="zh-Hant">把那幾段和問題組成一個 prompt，並要求「只能根據這些內容回答、標註出處、找不到就說不知道」。</span>
+    <span lang="en">Combine those passages and the question into a prompt that says: answer only from these, cite sources, say so if it's not there.</span></li>
+  <li><strong><span lang="zh-Hant">回答</span><span lang="en">Answer</span></strong>
+    <span lang="zh-Hant">把 prompt 送給 AI（就是第 2 章做的事）。</span>
+    <span lang="en">Send the prompt to the AI (exactly what chapter B2 did).</span></li>
+</ol>
+
+<h2 id="demo"><span lang="zh-Hant">動手試：員工手冊問答</span><span lang="en">Try it: employee handbook Q&amp;A</span></h2>
+<div class="demo" id="handbookDemo">
+  <div class="demo-head"><span class="tag">demo</span><h3><span lang="zh-Hant">搜尋 → 組合 prompt</span><span lang="en">Search → assemble the prompt</span></h3></div>
+  <div class="demo-body">
+    <details style="margin-bottom:.6rem"><summary style="cursor:pointer;font-size:.9rem"><span lang="zh-Hant">員工手冊全文（6 段）</span><span lang="en">Full handbook (6 sections, in Chinese)</span></summary><ul id="hbDocs" style="font-size:.88rem"></ul></details>
+    <p class="hint" lang="zh-Hant">搜尋方法很陽春：把文字切成「兩個字一組」，看問題和哪一段有最多相同的片段。最後兩個問題是搜尋失敗的例子，等一下會解釋。</p>
+    <p class="hint" lang="en">The search is very basic: split text into two-character pieces and see which section shares the most pieces with the question. The last two questions are search failures, explained below.</p>
+    <div class="row">
+      <button class="chip" data-q="請特休要提前幾天？">請特休要提前幾天？</button>
+      <button class="chip" data-q="病假超過幾天要附證明？">病假超過幾天要附證明？</button>
+      <button class="chip" data-q="一週可以在家工作幾天？">一週可以在家工作幾天？</button>
+      <button class="chip" data-q="筆電壞掉可以自己拿去修嗎？">筆電壞掉可以自己拿去修嗎？</button>
+      <button class="chip" data-q="公司有提供午餐嗎？">公司有提供午餐嗎？</button>
+    </div>
+    <div class="row"><input type="text" id="hbQ" value="請特休要提前幾天？" aria-label="question"></div>
+    <div class="cols">
+      <div class="col"><h4><span lang="zh-Hant">1. 找到的段落</span><span lang="en">1. Passages found</span></h4><div id="hbFound" style="font-size:.9rem"></div></div>
+      <div class="col fused"><h4><span lang="zh-Hant">2. 要送給 AI 的 prompt</span><span lang="en">2. Prompt sent to the AI</span></h4><pre id="hbPrompt" style="white-space:pre-wrap;margin:0;font-size:.84rem;font-family:inherit"></pre></div>
+    </div>
+  </div>
+</div>
+
+<h2 id="failures"><span lang="zh-Hant">搜尋失敗的兩種情況</span><span lang="en">Two ways search fails</span></h2>
+<div class="grid">
+  <div class="card"><span class="kicker"><span lang="zh-Hant">找不到</span><span lang="en">Nothing found</span></span><h3><span lang="zh-Hant">「筆電壞掉…」</span><span lang="en">"My laptop (筆電) broke…"</span></h3>
+    <p lang="zh-Hant">手冊寫的是「筆記型電腦」，問題寫的是「筆電」。意思一樣，但字不一樣，關鍵字搜尋就找不到。</p>
+    <p lang="en">The handbook says 筆記型電腦 (notebook computer); the question says 筆電 (laptop). Same meaning, different characters, so keyword search misses it.</p></div>
+  <div class="card"><span class="kicker"><span lang="zh-Hant">找錯</span><span lang="en">Wrong match</span></span><h3><span lang="zh-Hant">「公司有提供午餐嗎？」</span><span lang="en">"Does the company provide lunch?"</span></h3>
+    <p lang="zh-Hant">手冊沒寫午餐，但「設備」那段剛好有「公司提供」四個字，就被找出來了。</p>
+    <p lang="en">The handbook says nothing about lunch, but the equipment section happens to contain "the company provides", so it gets matched.</p></div>
+</div>
+<p lang="zh-Hant">第二種情況就是為什麼 prompt 要寫「找不到答案就說不知道」：就算搜尋給了不相關的段落，AI 也還有機會正確地說「手冊沒有寫到這件事」。第一種情況則需要更聰明的搜尋方法（能理解「筆電」和「筆記型電腦」是同一個東西），進階篇第 5 章會介紹。</p>
+<p lang="en">The second case is why the prompt says "say so if the answer isn't there": even when search returns an irrelevant passage, the AI can still correctly answer "the handbook doesn't cover this". The first case needs a smarter search that understands 筆電 and 筆記型電腦 are the same thing, covered in core chapter 05.</p>
+
+<h2 id="code"><span lang="zh-Hant">程式碼</span><span lang="en">The code</span></h2>
+<figure class="code"><figcaption><span>labs/beginner/handbook_qa.py</span></figcaption>
+<pre><code class="language-python">def pieces(text):
+    """把文字切成「兩個字一組」的小片段，例如「請假」「假要」「要提」。"""
+    text = "".join(ch for ch in text if ch.strip() and ch not in "，。？！、：；「」")
+    return {text[i:i + 2] for i in range(len(text) - 1)}
+
+
+def search(question, top_n=2):
+    """計算問題和每一段有幾個相同的片段，取最多的前幾段。"""
+    q = pieces(question)
+    scored = []
+    for doc_id, text in HANDBOOK.items():
+        overlap = q &amp; pieces(text)
+        if overlap:
+            scored.append((len(overlap), doc_id, sorted(overlap)))
+    scored.sort(reverse=True)
+    return [(doc_id, score, shared) for score, doc_id, shared in scored[:top_n]]</code></pre>
+</figure>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash">python -m labs.beginner.handbook_qa "病假超過幾天要附證明？"</code></pre>
+</figure>
+<p lang="zh-Hant">練習：把 <code>handbook_qa.py</code> 印出的 prompt，用第 2 章的方式送給 Claude，看看它的回答有沒有標註 [H2]。再試試「公司有提供午餐嗎？」，看它會不會老實說手冊沒寫。</p>
+<p lang="en">Exercise: send the prompt printed by <code>handbook_qa.py</code> to Claude as in chapter B2 and check that the answer cites [H2]. Then try "公司有提供午餐嗎？" (does the company provide lunch?) and see whether it honestly says the handbook doesn't cover it.</p>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="a">
+    <legend><span lang="zh-Hant">1. 為什麼不直接問 AI「我們公司的請假規定是什麼」？</span><span lang="en">1. Why not just ask the AI "what's our company's leave policy"?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">它沒讀過你們公司的文件，只能用一般公司的情況來猜。</span><span lang="en">It has never read your company's documents, so it can only guess from typical companies.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">AI 不能回答和公司有關的問題。</span><span lang="en">AI isn't allowed to answer company questions.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">可以直接問，它會自己上網查。</span><span lang="en">You can; it will look it up online.</span></span></label>
+    <div class="explain" lang="zh-Hant">內部文件不在模型的訓練資料裡。它不會說不知道，而是給出「一般公司常見的規定」，看起來很合理但可能完全不對。</div>
+    <div class="explain" lang="en">Internal documents aren't in its training data. Rather than say it doesn't know, it describes typical policies, which sound reasonable but may be entirely wrong for you.</div>
+  </fieldset>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">2. 搜尋找到了一段不相關的內容，什麼能讓 AI 仍然給出正確回應？</span><span lang="en">2. Search returned an irrelevant passage. What lets the AI still respond correctly?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">把 max_tokens 設大一點。</span><span lang="en">A larger max_tokens.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">多找幾段，越多越好。</span><span lang="en">Retrieving more passages; the more the better.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">prompt 要求「只根據提供的內容回答，找不到就說不知道」。</span><span lang="en">A prompt that says "answer only from the material; if it's not there, say so".</span></span></label>
+    <div class="explain" lang="zh-Hant">明確的「出口」讓 AI 在資料不足時誠實回答，而不是硬湊。</div>
+    <div class="explain" lang="en">An explicit way out lets the AI answer honestly when the material is insufficient instead of forcing an answer.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

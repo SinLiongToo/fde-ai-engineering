@@ -291,7 +291,7 @@ input[type="range"] { accent-color: var(--accent); }
 .col li { margin: .25rem 0; }
 .col .score { font-family: var(--font-mono); color: var(--fg-faint); font-size: .78rem; }
 .col.fused { border-color: var(--accent); }
-.hit { background: var(--accent-soft); border-radius: 4px; padding: 0 .2rem; }
+.hit { background: var(--accent-soft); border-radius: 3px; box-shadow: 0 0 0 2px var(--accent-soft); }
 .empty { color: var(--fg-faint); font-style: italic; font-size: .86rem; }
 
 /* state machine demo */

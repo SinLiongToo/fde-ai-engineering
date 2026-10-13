@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="glossary"
+  data-title-zh="詞彙表 · AI 工程實戰課"
+  data-title-en="Glossary · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>詞彙表 · AI 工程實戰課</title>
+<meta name="description" content="課程中出現的 AI 與軟體工程名詞，用一兩句白話解釋，並連到詳細說明的章節。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="assets/site.js"></script>
+<style>
+  .terms { display: grid; gap: .6rem; margin: 1.2rem 0; }
+  .term { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elev); padding: .8rem 1rem; }
+  .term h3 { margin: 0 0 .25rem; font-size: 1.02rem; }
+  .term h3 small { font-weight: 500; color: var(--fg-faint); margin-left: .4rem; font-size: .85rem; }
+  .term p { margin: 0; color: var(--fg-muted); font-size: .94rem; line-height: 1.6; }
+  .term .see { font-size: .84rem; margin-top: .35rem; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">參考</span><span lang="en">Reference</span></div>
+<h1><span lang="zh-Hant">詞彙表</span><span lang="en">Glossary</span></h1>
+<p class="lede" lang="zh-Hant">課程裡出現的名詞，用一兩句白話解釋。點連結可以跳到詳細說明的章節。</p>
+<p class="lede" lang="en">Terms used in the course, explained in a sentence or two. Follow the links to the chapter that covers each one.</p>
+
+<div class="row"><input type="text" id="termFilter" placeholder="搜尋 / Search…" aria-label="Filter terms"></div>
+<div class="terms" id="terms"></div>
+<p class="empty" id="noTerms" hidden><span lang="zh-Hant">沒有符合的詞。</span><span lang="en">No matching terms.</span></p>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+<script>
+(function () {
+  // [英文名, 中文名, 中文解釋, 英文解釋, 章節 slug, 章節代號]
+  var TERMS = [
+    ["Agent", "代理", "由 AI 自己決定下一步要做什麼、用哪個工具、何時結束的程式。比固定流程彈性，但更難預測。", "A program where the AI itself decides the next step, which tool to use and when to stop. More flexible than a fixed flow, but harder to predict.", "06-agents", "06"],
+    ["API", "應用程式介面", "程式之間溝通的規則。你的程式依照規則送出請求，AI 服務送回回應。", "The rules programs use to talk to each other. Your program sends a request by the rules; the AI service sends back a response.", "b2-first-api-call", "B2"],
+    ["API key", "API 金鑰", "證明請求是你送的一串字，費用也算在你頭上。要像密碼一樣保管，不能寫進程式碼。", "A string proving a request came from you; charges go to you. Guard it like a password and never put it in code.", "b2-first-api-call", "B2"],
+    ["Baseline", "基準", "上一次確認過的評測分數。新的改動要和它比較，分數變差就是退步。", "The last reviewed eval score. New changes are compared against it; a lower score is a regression.", "07-evals", "07"],
+    ["BM25", "BM25 關鍵字搜尋", "一種經典的關鍵字搜尋演算法。擅長找精確的代號與名稱，但不懂同義詞。", "A classic keyword-search algorithm. Great at exact codes and names, but blind to synonyms.", "05-retrieval", "05"],
+    ["Checkpoint", "檢查點", "把程式執行到一半的狀態存起來，之後可以從這裡繼續，例如等人核准後再接著做。", "A saved snapshot of a run in progress, so it can resume later, for example after a human approves.", "06-agents", "06"],
+    ["Chunk", "切段", "把長文件切成較小的段落，方便搜尋與放進 prompt。", "Splitting long documents into smaller passages for search and for fitting into prompts.", "05-retrieval", "05"],
+    ["Context window", "上下文視窗", "模型一次能「看到」的文字上限，包含問題、對話歷史與附上的文件。", "The limit on how much text a model can see at once, including the question, history and attached documents.", "b1-what-is-llm", "B1"],
+    ["Embedding", "向量表示", "把一段文字轉成一串數字，意思相近的文字，數字也相近。是向量搜尋的基礎。", "Turning text into a list of numbers so that similar meanings get similar numbers. The basis of vector search.", "05-retrieval", "05"],
+    ["Eval", "評測", "用一組問題與標準答案檢查 AI 系統的表現，每次修改後重跑，確認沒有變差。", "Checking an AI system against questions with known answers, re-run after every change to catch regressions.", "b5-is-it-good", "B5"],
+    ["FDE (Forward Deployed Engineer)", "前線部署工程師", "直接進駐客戶環境、對結果負責的工程師，把模糊的需求做成能上線的系統。", "An engineer embedded with customers who owns outcomes, turning vague needs into systems that ship.", "01-fde-role", "01"],
+    ["Golden set", "測試集／考卷", "評測用的問題與標準答案集合，最好來自真實使用情況。", "The set of questions and reference answers used for evals, ideally drawn from real usage.", "07-evals", "07"],
+    ["Hallucination", "幻覺", "AI 說出聽起來很合理、但其實是錯的或編造的內容。", "When AI states something that sounds plausible but is wrong or invented.", "b1-what-is-llm", "B1"],
+    ["Human-in-the-loop", "人工審核", "在重要或危險的操作執行前，先暫停讓人確認。", "Pausing before an important or risky action so a person can approve it.", "06-agents", "06"],
+    ["JSON", "JSON", "一種常見的資料格式，用大括號與鍵值表示結構，程式很容易讀取。", "A common data format using braces and key-value pairs; easy for programs to read.", "04-structured-output", "04"],
+    ["LLM (Large Language Model)", "大型語言模型", "讀過大量文字、能一個字一個字接著寫下去的 AI 模型。ChatGPT、Claude 都是。", "An AI model trained on huge amounts of text that writes by continuing one token at a time. ChatGPT and Claude are examples.", "b1-what-is-llm", "B1"],
+    ["MCP (Model Context Protocol)", "模型上下文協定", "一個開放標準，讓各種 AI 應用用同樣的方式使用外部工具與資料。", "An open standard that lets AI applications use external tools and data in a uniform way.", "06-agents", "06"],
+    ["Prompt", "提示詞", "你給 AI 的指示與資料。說得越清楚，AI 越不需要用猜的。", "The instructions and material you give the AI. The clearer it is, the less the AI has to guess.", "b3-prompting", "B3"],
+    ["Prompt caching", "提示快取", "重複使用 prompt 開頭不變的部分，降低費用與延遲。", "Reusing the unchanged beginning of a prompt to cut cost and latency.", "08-production", "08"],
+    ["Prompt injection", "提示注入", "有人把指令藏在 AI 會讀到的內容裡（網頁、信件、文件），讓 AI 做出不該做的事。", "Hiding instructions in content the AI reads (web pages, emails, files) to make it do something it shouldn't.", "08-production", "08"],
+    ["Pydantic", "Pydantic", "Python 的資料驗證套件，用來檢查資料格式與規則是否正確。", "A Python data-validation library for checking that data matches formats and rules.", "04-structured-output", "04"],
+    ["RAG (Retrieval-Augmented Generation)", "檢索增強生成", "先搜尋相關資料，再交給 AI 根據這些資料回答。就像讓 AI 開書考試。", "Search for relevant material first, then have the AI answer from it. An open-book exam for AI.", "b4-your-documents", "B4"],
+    ["Recall@k", "前 k 筆召回率", "相關的文件中，有多少出現在搜尋結果的前 k 筆。", "The share of relevant documents that appear in the top k search results.", "05-retrieval", "05"],
+    ["RRF (Reciprocal Rank Fusion)", "名次倒數融合", "把兩種搜尋結果依名次合併的方法，不需要比較兩種分數的大小。", "A way to merge two search result lists by rank, without comparing their scores.", "05-retrieval", "05"],
+    ["Schema", "結構定義", "描述資料應該長什麼樣子：有哪些欄位、什麼型別、哪些必填。", "A description of what data should look like: which fields, what types, which are required.", "04-structured-output", "04"],
+    ["Structured output", "結構化輸出", "要求 AI 依照指定的 schema 輸出資料，讓程式可以直接讀取。", "Making the AI produce data matching a given schema so programs can read it directly.", "04-structured-output", "04"],
+    ["System prompt", "系統提示", "給 AI 的整體說明（角色、規則、語氣），對整段對話都適用。", "Overall instructions for the AI (role, rules, tone) that apply to the whole conversation.", "b2-first-api-call", "B2"],
+    ["Token", "token", "模型讀寫文字的最小單位，可能是一個字或一個字的片段。費用與長度限制都以 token 計算。", "The smallest unit a model reads and writes: a word or part of one. Cost and length limits are counted in tokens.", "b1-what-is-llm", "B1"],
+    ["Tool calling", "工具呼叫", "讓 AI 請你的程式執行特定功能（查資料、寄信等），再把結果交還給它。", "Letting the AI ask your program to run a specific function (look something up, send an email) and get the result back.", "06-agents", "06"],
+    ["Workflow", "固定流程", "由程式決定步驟、只在固定的地方呼叫 AI 的做法。比 agent 好預測，多數情況應該優先考慮。", "An approach where code decides the steps and calls the AI at fixed points. More predictable than an agent; usually the first choice.", "06-agents", "06"]
+  ];
+  function both(zh, en) { return '<span lang="zh-Hant">' + zh + '</span><span lang="en">' + en + "</span>"; }
+  var box = document.getElementById("terms");
+  box.innerHTML = TERMS.map(function (t) {
+    var id = "t-" + t[0].toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    var key = (t[0] + " " + t[1] + " " + t[2] + " " + t[3]).toLowerCase();
+    return '<div class="term" id="' + id + '" data-key="' + key.replace(/"/g, "") + '"><h3>' + t[0] +
+      (t[1] !== t[0] ? '<small lang="zh-Hant" class="both">' + t[1] + "</small>" : "") + "</h3>" +
+      "<p>" + both(t[2], t[3]) + "</p>" +
+      '<div class="see"><a href="' + t[4] + '.html">' + both("詳見 ", "See ") + t[5] + "</a></div></div>";
+  }).join("");
+  var input = document.getElementById("termFilter");
+  input.addEventListener("input", function () {
+    var q = input.value.trim().toLowerCase(), shown = 0;
+    box.querySelectorAll(".term").forEach(function (el) {
+      var ok = !q || el.getAttribute("data-key").indexOf(q) >= 0;
+      el.hidden = !ok; if (ok) shown++;
+    });
+    document.getElementById("noTerms").hidden = shown > 0;
+  });
+})();
+</script>
+</body>
+</html>

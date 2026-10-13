@@ -3,16 +3,22 @@
 (function () {
   "use strict";
 
+  // part: "basics" = 入門篇，"core" = 進階篇。順序就是閱讀順序（上一章／下一章）。
   var CHAPTERS = [
-    { slug: "01-fde-role", zh: "FDE 是做什麼的", en: "What FDEs actually do", min: 15 },
-    { slug: "02-engagement", zh: "從需求到上線的交付流程", en: "The engagement lifecycle", min: 20 },
-    { slug: "03-ai-assisted-dev", zh: "與 Coding Agent 協作", en: "Working with coding agents", min: 25 },
-    { slug: "04-structured-output", zh: "結構化輸出與資料契約", en: "Structured output and contracts", min: 25 },
-    { slug: "05-retrieval", zh: "檢索與 RAG", en: "Retrieval and RAG", min: 35 },
-    { slug: "06-agents", zh: "Agent、工具與人工審核", en: "Agents, tools and approvals", min: 35 },
-    { slug: "07-evals", zh: "評測：把感覺變成數字", en: "Evals: from vibes to numbers", min: 30 },
-    { slug: "08-production", zh: "上線：可觀測性、安全與成本", en: "Production: observability, security, cost", min: 30 },
-    { slug: "09-labs", zh: "實作練習與延伸資源", en: "Labs and further reading", min: 15 }
+    { slug: "b1-what-is-llm", part: "basics", num: "B1", zh: "AI 語言模型在做什麼", en: "What a language model does", min: 15 },
+    { slug: "b2-first-api-call", part: "basics", num: "B2", zh: "第一次呼叫 AI", en: "Your first API call", min: 15 },
+    { slug: "b3-prompting", part: "basics", num: "B3", zh: "把話說清楚：寫 prompt", en: "Saying it clearly: prompts", min: 15 },
+    { slug: "b4-your-documents", part: "basics", num: "B4", zh: "讓 AI 讀你的文件", en: "Answering from your documents", min: 15 },
+    { slug: "b5-is-it-good", part: "basics", num: "B5", zh: "它做得好嗎？簡單的測試", en: "Is it any good? Simple tests", min: 15 },
+    { slug: "01-fde-role", part: "core", num: "01", zh: "FDE 是做什麼的", en: "What FDEs actually do", min: 15 },
+    { slug: "02-engagement", part: "core", num: "02", zh: "從需求到上線的交付流程", en: "The engagement lifecycle", min: 20 },
+    { slug: "03-ai-assisted-dev", part: "core", num: "03", zh: "與 Coding Agent 協作", en: "Working with coding agents", min: 25 },
+    { slug: "04-structured-output", part: "core", num: "04", zh: "結構化輸出與資料契約", en: "Structured output and contracts", min: 25 },
+    { slug: "05-retrieval", part: "core", num: "05", zh: "檢索與 RAG", en: "Retrieval and RAG", min: 35 },
+    { slug: "06-agents", part: "core", num: "06", zh: "Agent、工具與人工審核", en: "Agents, tools and approvals", min: 35 },
+    { slug: "07-evals", part: "core", num: "07", zh: "評測：把感覺變成數字", en: "Evals: from vibes to numbers", min: 30 },
+    { slug: "08-production", part: "core", num: "08", zh: "上線：可觀測性、安全與成本", en: "Production: observability, security, cost", min: 30 },
+    { slug: "09-labs", part: "core", num: "09", zh: "實作練習與延伸資源", en: "Labs and further reading", min: 15 }
   ];
   window.FDE_CHAPTERS = CHAPTERS;
 
@@ -120,14 +126,20 @@
     var doneCount = CHAPTERS.filter(function (c) { return p[c.slug]; }).length;
     var html = '<ol><li><a href="index.html"' + (page === "index" ? ' aria-current="page"' : "") +
       '><span class="num">·</span><span>' + both("課程首頁", "Course home") + "</span></a></li></ol>";
-    html += "<h2>" + both("章節", "Chapters") + "</h2><ol>";
-    CHAPTERS.forEach(function (c, i) {
-      html += '<li><a href="' + c.slug + '.html"' + (c.slug === page ? ' aria-current="page"' : "") + ">" +
-        '<span class="num">' + String(i + 1).padStart(2, "0") + "</span>" +
-        "<span>" + both(c.zh, c.en) + "</span>" +
-        (p[c.slug] ? '<span class="done" aria-label="done">✓</span>' : "<span></span>") + "</a></li>";
+    var PARTS = [["basics", "入門篇", "Basics"], ["core", "進階篇", "Core course"]];
+    PARTS.forEach(function (part) {
+      html += "<h2>" + both(part[1], part[2]) + "</h2><ol>";
+      CHAPTERS.forEach(function (c) {
+        if (c.part !== part[0]) return;
+        html += '<li><a href="' + c.slug + '.html"' + (c.slug === page ? ' aria-current="page"' : "") + ">" +
+          '<span class="num">' + c.num + "</span>" +
+          "<span>" + both(c.zh, c.en) + "</span>" +
+          (p[c.slug] ? '<span class="done" aria-label="done">✓</span>' : "<span></span>") + "</a></li>";
+      });
+      html += "</ol>";
     });
-    html += "</ol>";
+    html += '<ol style="margin-top:.8rem"><li><a href="glossary.html"' + (page === "glossary" ? ' aria-current="page"' : "") +
+      '><span class="num">Aa</span><span>' + both("詞彙表", "Glossary") + "</span><span></span></a></li></ol>";
     var pct = Math.round(doneCount / CHAPTERS.length * 100);
     html += '<div class="progress">' + both("學習進度", "Progress") + " " + doneCount + " / " + CHAPTERS.length +
       '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct +

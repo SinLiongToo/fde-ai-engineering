@@ -11,6 +11,18 @@ production in customer environments. Every chapter maps to offline, tested Pytho
 
 ## 內容 / Contents
 
+**入門篇 / Basics** — 給會一點程式、但沒做過 AI 的人 / for people who code a little but have never built with AI
+
+| # | 章節 | Chapter | 練習 / Lab |
+|---|------|---------|-----------|
+| B1 | AI 語言模型在做什麼 | What a language model does | `labs/beginner/next_word.py` |
+| B2 | 第一次呼叫 AI | Your first API call | `labs/beginner/first_call.py` |
+| B3 | 把話說清楚：寫 prompt | Saying it clearly: prompts | |
+| B4 | 讓 AI 讀你的文件 | Answering from your documents | `labs/beginner/handbook_qa.py` |
+| B5 | 它做得好嗎？簡單的測試 | Is it any good? Simple tests | `labs/beginner/check_answers.py` |
+
+**進階篇 / Core course** — 給有經驗的工程師 / for experienced engineers
+
 | # | 章節 | Chapter | 練習 / Lab |
 |---|------|---------|-----------|
 | 1 | FDE 是做什麼的 | What FDEs actually do | |
@@ -23,9 +35,9 @@ production in customer environments. Every chapter maps to offline, tested Pytho
 | 8 | 上線：可觀測性、安全與成本 | Production: observability, security, cost | |
 | 9 | 實作練習與延伸資源 | Labs and further reading | |
 
-第 4 到 7 章各有一個瀏覽器內的互動示範，使用和 Python 練習相同的演算法（檢索示範已驗證與 Python 結果一致）。
+入門篇每一章與進階篇第 4 到 7 章都有瀏覽器內的互動示範，使用和 Python 練習相同的演算法（檢索示範已驗證與 Python 結果一致）。
 
-Chapters 4–7 each include an in-browser demo running the same algorithms as the Python labs
+Every basics chapter and core chapters 4–7 include an in-browser demo running the same algorithms as the Python labs
 (the retrieval demo is verified to match the Python results exactly).
 
 ## 使用 / Usage
@@ -46,7 +58,7 @@ To publish on GitHub Pages: Settings → Pages → deploy from the `/docs` folde
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest                     # 58 tests
+python -m pytest                     # 66 tests
 python -m labs.core.evals            # eval gate against labs/core/baseline.json
 python -m labs.mcp_sre.cli --stdio   # MCP server over a real stdio subprocess
 ```
@@ -56,11 +68,14 @@ python -m labs.mcp_sre.cli --stdio   # MCP server over a real stdio subprocess
 ```text
 docs/                    網站 / website (static HTML, no build step)
   index.html             首頁、課程地圖、自我評估
-  01-…09-*.html          九個章節
+  b1-…b5-*.html          入門篇五章
+  01-…09-*.html          進階篇九章
+  glossary.html          詞彙表
   assets/site.css        設計系統：顏色變數、深淺色、版面
   assets/site.js         側欄、目錄、語言/主題切換、小測驗、進度
-  assets/demos/*.js      第 4–7 章的互動示範
+  assets/demos/*.js      互動示範（basics.js 為入門篇）
 labs/
+  beginner/              入門篇：猜下一個字、第一次呼叫 API、手冊問答、考卷
   core/                  第 4–7 章：契約、檢索、agent、評測
   code_reviewer/         AST 靜態分析 + 選用 LLM 補充
   mcp_sre/               最小 MCP server/client + SRE 診斷 workflow
