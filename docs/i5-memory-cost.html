@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="i5-memory-cost"
+  data-title-zh="I5 對話記憶與成本 · AI 工程實戰課"
+  data-title-en="I5 Conversation memory and cost · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I5 對話記憶與成本 · AI 工程實戰課</title>
+<meta name="description" content="中級篇第 5 章：讓機器人記得前面聊過什麼，同時控制成本。歷史只存問與答、只保留最近幾輪、記錄 token 用量與費用，以及 prompt caching 的基本概念。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/demos/handbook_data.js"></script>
+<script defer src="assets/demos/intermediate.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">中級篇 · 第 5 章</span><span lang="en">Intermediate · Chapter 5</span></div>
+<h1><span lang="zh-Hant">對話記憶與成本</span><span lang="en">Conversation memory and cost</span></h1>
+<p class="lede" lang="zh-Hant">員工問完「特休要提前幾天？」，接著問「那病假呢？」。機器人要記得前一題，才看得懂「那」。但記得越多，每次送出的 token 越多，費用也越高。這一章在兩者之間找平衡。</p>
+<p class="lede" lang="en">An employee asks how far ahead to request annual leave, then "what about sick leave?". The bot must remember the previous question to understand "what about". But the more it remembers, the more tokens each request sends and the more it costs. This chapter balances the two.</p>
+<div class="meta"><span>⏱ 20 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>bot.py</code> · <code>config.py</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">這章要加的功能</span><span lang="en">What this chapter adds</span></h2>
+  <ul lang="zh-Hant">
+    <li>對話歷史：只存「問題」與「最終回答」，不存手冊段落。</li>
+    <li>只把最近幾輪送出去。</li>
+    <li>記錄每次的 token 用量，換算成費用。</li>
+  </ul>
+  <ul lang="en">
+    <li>Conversation history that stores only questions and final answers, not handbook passages.</li>
+    <li>Sending only the most recent turns.</li>
+    <li>Tracking token usage per request and converting it to cost.</li>
+  </ul>
+</section>
+
+<h2 id="what-to-keep"><span lang="zh-Hant">歷史要存什麼</span><span lang="en">What to keep in history</span></h2>
+<p lang="zh-Hant">入門篇 B2 說過：API 不會記得你，每次都要把對話重新送出去。但每一輪實際送出的內容，除了問題，還有好幾段手冊（可能是問題的十幾倍長）。如果把這些全部存進歷史，對話越長就越貴，而且舊的手冊段落多半和新問題無關。</p>
+<p lang="en">Basics chapter B2 showed that the API doesn't remember you, so you resend the conversation each time. But each turn sends not just the question, but several handbook passages, often many times longer. Storing all of that in history makes long chats expensive, and old passages are mostly irrelevant to new questions.</p>
+<p lang="zh-Hant">所以我們只存「問題」與「最終回答」。新問題的手冊段落，每次重新搜尋：</p>
+<p lang="en">So we keep only questions and final answers, and search afresh for each new question:</p>
+<figure class="code"><figcaption><span>labs/intermediate/bot.py</span></figcaption>
+<pre><code class="language-python">recent = self.history[-2 * self.max_history_turns:] if self.max_history_turns else []
+messages = recent + [{"role": "user", "content": build_user_message(question, hits)}]
+...
+# 回答通過檢查後，只把「問題」與「回答文字」存進歷史
+self.history += [{"role": "user", "content": question},
+                 {"role": "assistant", "content": turn.answer.answer}]</code></pre>
+</figure>
+<div class="callout warn">
+  <span class="label"><span lang="zh-Hant">取捨</span><span lang="en">Trade-off</span></span>
+  <p lang="zh-Hant">只保留最近 4 輪，代表第 5 輪以前的內容機器人會「忘記」。對手冊問答來說通常沒關係，因為大多數問題是獨立的。如果你的場景需要記得很久以前的事（例如長時間的客服對話），常見做法是把舊對話整理成一段摘要放進去。</p>
+  <p lang="en">Keeping only the last 4 turns means the bot "forgets" anything earlier. For handbook Q&amp;A that's usually fine, since most questions are independent. If your use case needs long memory (say, a long support conversation), a common approach is to summarise older turns into a short note.</p>
+</div>
+
+<h2 id="usage"><span lang="zh-Hant">記錄用量與費用</span><span lang="en">Tracking usage and cost</span></h2>
+<p lang="zh-Hant">每次 API 回應都會告訴你這次用了多少輸入與輸出 token。把它記下來，就能算出費用。不要等到月底收到帳單才知道花了多少。</p>
+<p lang="en">Every API response reports the input and output tokens used. Record them and you can compute cost. Don't wait for the monthly bill to find out what you spent.</p>
+<figure class="code"><figcaption><span>labs/intermediate/bot.py</span></figcaption>
+<pre><code class="language-python">@dataclass
+class Usage:
+    calls: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+    def add(self, reply) -&gt; None:
+        self.calls += 1
+        self.input_tokens += reply.input_tokens
+        self.output_tokens += reply.output_tokens
+
+    def cost_usd(self, model: str = config.MODEL) -&gt; float:
+        price_in, price_out = config.PRICES_PER_MTOK[model]
+        return (self.input_tokens * price_in + self.output_tokens * price_out) / 1_000_000</code></pre>
+</figure>
+<p lang="zh-Hant">注意：一個問題可能呼叫 API 不只一次（用工具時兩次、重試時再多一次），所以「每個問題的成本」要把這些都加起來。<code>chat.py</code> 輸入 <code>/usage</code> 可以看到目前累計。</p>
+<p lang="en">Note that one question may call the API more than once (twice with a tool, once more on a retry), so cost per question must add them all up. Type <code>/usage</code> in <code>chat.py</code> to see the running total.</p>
+
+<h2 id="demo"><span lang="zh-Hant">動手試：對話越長，每次送出越多</span><span lang="en">Try it: longer chats send more each time</span></h2>
+<div class="demo" id="costDemo">
+  <div class="demo-head"><span class="tag">demo</span><h3><span lang="zh-Hant">保留全部歷史 vs. 只保留最近 4 輪</span><span lang="en">Keep all history vs. keep the last 4 turns</span></h3></div>
+  <div class="demo-body">
+    <div class="row" style="font-size:.88rem"><label for="cmTurns" style="min-width:11rem"><span lang="zh-Hant">對話輪數</span><span lang="en">Turns</span> <strong id="cmTurnsV"></strong></label><input type="range" id="cmTurns" min="2" max="60" value="20" style="flex:1 1 200px"></div>
+    <div class="row" style="font-size:.88rem"><label for="cmContext" style="min-width:11rem"><span lang="zh-Hant">每次附上的手冊 token</span><span lang="en">Handbook tokens per turn</span> <strong id="cmContextV"></strong></label><input type="range" id="cmContext" min="0" max="3000" step="100" value="600" style="flex:1 1 200px"></div>
+    <p class="hint" lang="zh-Hant">每根柱子是一次請求送出的輸入 token。橘色：保留全部歷史；綠色：只保留最近 4 輪。</p>
+    <p class="hint" lang="en">Each bar is the input tokens of one request. Orange: keep all history; green: keep the last 4 turns.</p>
+    <div class="diagram" style="padding:.4rem;margin:.6rem 0"><svg viewBox="0 0 640 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Input tokens per request"></svg></div>
+    <div class="output" aria-live="polite"></div>
+  </div>
+</div>
+<p lang="zh-Hant">保留全部歷史時，每次請求的輸入會一直線性變長，總成本則是越聊越快地增加。只保留最近幾輪，每次的輸入很快就會穩定下來。</p>
+<p lang="en">Keeping all history makes each request's input grow linearly, so total cost grows faster and faster. Keeping only recent turns makes per-request input level off quickly.</p>
+
+<h2 id="caching"><span lang="zh-Hant">再省一點：prompt caching</span><span lang="en">Saving more: prompt caching</span></h2>
+<p lang="zh-Hant">我們的 system prompt 每次都一模一樣。很多 API 提供 prompt caching：如果 prompt 的<strong>開頭</strong>和之前的請求完全相同，這段可以用比較便宜的價格計費，也比較快。要用好它只有一個原則：<strong>不變的內容放前面，會變的放後面</strong>。如果你在 system prompt 開頭放了「現在時間：14:03:22」，每次都不一樣，快取就永遠不會生效。詳細做法見進階篇<a href="08-production.html">第 08 章</a>。</p>
+<p lang="en">Our system prompt is identical every time. Many APIs offer prompt caching: if the <strong>beginning</strong> of a prompt matches an earlier request exactly, that part is billed at a lower rate and processed faster. One rule makes it work: <strong>stable content first, changing content last</strong>. Put "current time: 14:03:22" at the top of the system prompt and it differs every time, so the cache never hits. Details in core <a href="08-production.html">chapter 08</a>.</p>
+
+<h2 id="practice"><span lang="zh-Hant">練習</span><span lang="en">Exercises</span></h2>
+<ol lang="zh-Hant">
+  <li>用 <code>chat.py --fake</code> 連續問 6 個問題，每問一題就輸入 <code>/usage</code>，觀察輸入 token 怎麼變化。再把 <code>MAX_HISTORY_TURNS</code> 改成 0 重做一次。</li>
+  <li>在 <code>Turn</code> 裡加上「這一題的費用」，並讓 <code>chat.py</code> 在每個回答後面顯示。</li>
+</ol>
+<ol lang="en">
+  <li>With <code>chat.py --fake</code>, ask 6 questions in a row, typing <code>/usage</code> after each, and watch input tokens change. Then set <code>MAX_HISTORY_TURNS</code> to 0 and repeat.</li>
+  <li>Add "cost of this question" to <code>Turn</code> and have <code>chat.py</code> show it after each answer.</li>
+</ol>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="a">
+    <legend><span lang="zh-Hant">1. 為什麼歷史只存問題與回答，不存每次附上的手冊段落？</span><span lang="en">1. Why store only questions and answers in history, not the attached handbook passages?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">段落很長且多半和下一題無關；存了會讓每次請求越來越貴。新問題的段落會重新搜尋。</span><span lang="en">Passages are long and mostly irrelevant to the next question; keeping them makes every request costlier. New questions get a fresh search.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">API 不允許在歷史裡放長文字。</span><span lang="en">The API doesn't allow long text in history.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">為了保護個資。</span><span lang="en">To protect personal data.</span></span></label>
+    <div class="explain" lang="zh-Hant">這是成本與相關性的取捨。需要時，每一題都能重新取得最相關的段落。</div>
+    <div class="explain" lang="en">It's a cost/relevance trade-off. Each question can always fetch the most relevant passages afresh.</div>
+  </fieldset>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">2. 開了 prompt caching 卻完全沒效果。最可能的原因？</span><span lang="en">2. Prompt caching is on but has no effect. Most likely cause?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">對話太短。</span><span lang="en">The chat is too short.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">用了繁體中文。</span><span lang="en">It's in Traditional Chinese.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">prompt 的開頭每次都不一樣，例如放了目前時間。</span><span lang="en">The start of the prompt changes every time, for example a timestamp.</span></span></label>
+    <div class="explain" lang="zh-Hant">快取只認「完全相同的開頭」。會變的內容要放到最後面。</div>
+    <div class="explain" lang="en">Caching only matches an identical prefix. Put changing content at the end.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

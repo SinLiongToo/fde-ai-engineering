@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="i3-better-search"
+  data-title-zh="I3 更好的搜尋，並量出差別 · AI 工程實戰課"
+  data-title-en="I3 Better search, measured · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I3 更好的搜尋，並量出差別 · AI 工程實戰課</title>
+<meta name="description" content="中級篇第 3 章：依標題切段、依罕見程度加權、設定分數門檻、加入同義詞表，並用 18 題測試量出每一步的改善與取捨。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/demos/handbook_data.js"></script>
+<script defer src="assets/demos/intermediate.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">中級篇 · 第 3 章</span><span lang="en">Intermediate · Chapter 3</span></div>
+<h1><span lang="zh-Hant">更好的搜尋，並量出差別</span><span lang="en">Better search, measured</span></h1>
+<p class="lede" lang="zh-Hant">機器人的回答品質，上限由搜尋決定：沒找到的段落，AI 不可能引用。這一章把入門篇 B4 的陽春搜尋改進兩次，而且每一次都用同一組測試題量出效果，不靠感覺。</p>
+<p class="lede" lang="en">Search sets the ceiling on answer quality: a passage that isn't found can't be cited. This chapter improves the basic search from B4 twice, and measures each step against the same test questions instead of going by feel.</p>
+<div class="meta"><span>⏱ 25 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>search.py</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">這章要加的功能</span><span lang="en">What this chapter adds</span></h2>
+  <ul lang="zh-Hant">
+    <li>依手冊標題切段。</li>
+    <li>v2：依「片段有多罕見」加權，並設最低分數門檻。</li>
+    <li>v3：加入同義詞表。</li>
+    <li>用 18 題測試比較三個版本，看懂每一步的取捨。</li>
+  </ul>
+  <ul lang="en">
+    <li>Chunking the handbook by heading.</li>
+    <li>v2: weighting pieces by rarity, plus a minimum score threshold.</li>
+    <li>v3: a synonym table.</li>
+    <li>Comparing all three on 18 test questions to understand each trade-off.</li>
+  </ul>
+</section>
+
+<h2 id="chunk"><span lang="zh-Hant">切段：一個主題一段</span><span lang="en">Chunking: one topic per chunk</span></h2>
+<p lang="zh-Hant">手冊用 <code>## H01 特休假</code> 這樣的標題分段。我們就照標題切，每段帶上標題，讓「特休假：……」單獨拿出來也看得懂：</p>
+<p lang="en">The handbook is divided by headings like <code>## H01 特休假</code>. We split on those headings and keep the title on each chunk, so a chunk reads sensibly on its own:</p>
+<figure class="code"><figcaption><span>labs/intermediate/search.py</span></figcaption>
+<pre><code class="language-python">def load_chunks(path: Path = HANDBOOK_PATH) -&gt; list[Chunk]:
+    """依「## H01 標題」切段，每段一個 Chunk。"""
+    text = path.read_text(encoding="utf-8")
+    chunks = []
+    for m in re.finditer(r"^## (H\d+) (.+?)\n(.*?)(?=^## |\Z)", text, re.S | re.M):
+        chunks.append(Chunk(m.group(1), m.group(2).strip(), " ".join(m.group(3).split())))
+    return chunks</code></pre>
+</figure>
+
+<h2 id="versions"><span lang="zh-Hant">三個版本</span><span lang="en">Three versions</span></h2>
+<h3>v1：<span lang="zh-Hant">數相同的片段</span><span lang="en">count shared pieces</span></h3>
+<p lang="zh-Hant">就是入門篇 B4 的做法。問題：「公司」「提供」這種到處都有的片段，和「特休」這種很有資訊量的片段，算一樣多分。所以「公司有提供免費午餐嗎？」會被配到設備那段。</p>
+<p lang="en">The B4 approach. Problem: everywhere-pieces like 公司 (company) and 提供 (provide) score the same as informative ones like 特休 (annual leave). So "does the company provide free lunch?" gets matched to the equipment section.</p>
+
+<h3>v2：<span lang="zh-Hant">罕見的片段比較重要，加上門檻</span><span lang="en">rare pieces matter more, plus a threshold</span></h3>
+<p lang="zh-Hant">一個片段出現在越少段落裡，代表它越能區分段落，權重就越高（這個概念叫 IDF）。再加上一條規則：總分低於門檻就當作「找不到」，讓機器人誠實說手冊沒寫。</p>
+<p lang="en">The fewer chunks a piece appears in, the better it distinguishes them, so it gets more weight (this idea is called IDF). Add one rule: if the total score is below a threshold, treat it as "not found" so the bot honestly says the handbook doesn't cover it.</p>
+<figure class="code"><figcaption><span>labs/intermediate/search.py</span></figcaption>
+<pre><code class="language-python"># 每個片段出現在幾段裡；越少見，權重越高（IDF 的概念）
+n = len(self.chunks)
+df = {}
+for ps in self.chunk_pieces.values():
+    for p in ps:
+        df[p] = df.get(p, 0) + 1
+self.weight = {p: math.log((n + 1) / (f + 0.5)) for p, f in df.items()}
+
+...
+score = sum(self.weight[p] for p in shared)          # v2、v3
+...
+hits = [h for h in hits if h.score &gt;= self.min_score] # 低於門檻就不要</code></pre>
+</figure>
+
+<h3>v3：<span lang="zh-Hant">同義詞表</span><span lang="en">a synonym table</span></h3>
+<p lang="zh-Hant">員工會說「年假」「筆電」「在家上班」，手冊寫的是「特休」「筆記型電腦」「遠端工作」。最直接的做法是維護一張同義詞表，問題裡出現左邊的詞，就把右邊的詞也加進去搜尋：</p>
+<p lang="en">Employees say 年假, 筆電 and 在家上班; the handbook says 特休, 筆記型電腦 and 遠端工作. The most direct fix is a synonym table: when a left-hand word appears in the question, add the right-hand word to the search:</p>
+<figure class="code"><figcaption><span>labs/intermediate/search.py</span></figcaption>
+<pre><code class="language-python">SYNONYMS = {
+    "筆電": "筆記型電腦",
+    "年假": "特休",
+    "在家上班": "遠端工作",
+    "報銷": "報帳",
+    "辭職": "離職",
+    "進修": "教育訓練",
+    ...
+}</code></pre>
+</figure>
+
+<h2 id="measure"><span lang="zh-Hant">量出差別</span><span lang="en">Measure the difference</span></h2>
+<p lang="zh-Hant">測試題共 18 題，每題標了類型。執行 <code>python -m labs.intermediate.evals --search</code> 的實際結果：</p>
+<p lang="en">There are 18 test questions, each tagged by type. Actual output of <code>python -m labs.intermediate.evals --search</code>:</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">版本</span><span lang="en">Version</span></th><th><span lang="zh-Hant">總計</span><span lang="en">Total</span></th><th><span lang="zh-Hant">關鍵字題</span><span lang="en">Keyword</span></th><th><span lang="zh-Hant">同義詞題</span><span lang="en">Synonym</span></th><th><span lang="zh-Hant">手冊沒寫</span><span lang="en">Not in handbook</span></th><th><span lang="zh-Hant">換句話說</span><span lang="en">Paraphrase</span></th></tr></thead>
+  <tbody>
+    <tr><td>v1</td><td>11/18</td><td>7/7</td><td>3/6</td><td style="color:var(--bad)">0/3</td><td>0/1</td></tr>
+    <tr><td>v2</td><td>11/18</td><td>6/7</td><td style="color:var(--bad)">1/6</td><td>3/3</td><td>0/1</td></tr>
+    <tr><td>v3</td><td><strong>15/18</strong></td><td>6/7</td><td>5/6</td><td>3/3</td><td>0/1</td></tr>
+  </tbody>
+</table>
+</div>
+<p lang="zh-Hant">只看總分，v1 和 v2 一樣是 11 題。但分類看就很清楚：</p>
+<p lang="en">On the total alone, v1 and v2 tie at 11. Broken down by type, the picture is clear:</p>
+<ul lang="zh-Hant">
+  <li><strong>v2 解決了「亂配」</strong>（手冊沒寫的 3 題全對），但門檻也擋掉了一些分數不高的正確結果，同義詞題反而變差。這就是<strong>取捨</strong>：門檻越高，越不會亂答，但也越容易漏掉。</li>
+  <li><strong>v3 補回了同義詞題</strong>，總分提升到 15。</li>
+  <li><strong>這就是為什麼要分類</strong>：如果只看總分，你會以為 v2 沒有用。</li>
+</ul>
+<ul lang="en">
+  <li><strong>v2 fixes false matches</strong> (all 3 not-in-handbook questions pass), but the threshold also blocks some low-scoring correct results, so synonym questions get worse. That's the <strong>trade-off</strong>: a higher threshold means fewer wrong answers but more misses.</li>
+  <li><strong>v3 wins back the synonym questions</strong>, lifting the total to 15.</li>
+  <li><strong>This is why you tag questions</strong>: from the total alone you'd conclude v2 was useless.</li>
+</ul>
+
+<h2 id="demo"><span lang="zh-Hant">動手試：三個版本並排比較</span><span lang="en">Try it: three versions side by side</span></h2>
+<div class="demo" id="searchCmpDemo">
+  <div class="demo-head"><span class="tag">demo</span><h3><span lang="zh-Hant">同一個問題，三種搜尋</span><span lang="en">One question, three searches</span></h3></div>
+  <div class="demo-body">
+    <p class="hint" lang="zh-Hant">和 Python 版本相同的資料與演算法（結果一致）。分數低於 3.0 的結果，v2、v3 會丟掉。</p>
+    <p class="hint" lang="en">Same data and algorithm as the Python version (identical results). v2 and v3 drop results scoring below 3.0.</p>
+    <div class="row">
+      <button class="chip" data-q="筆電壞了可以自己拿去修嗎？">筆電壞了…</button>
+      <button class="chip" data-q="公司有提供免費午餐嗎？">公司有提供免費午餐嗎？</button>
+      <button class="chip" data-q="一週可以在家上班幾天？">在家上班幾天？</button>
+      <button class="chip" data-q="加班費怎麼算？">加班費怎麼算？</button>
+      <button class="chip" data-q="最晚幾點要到公司？">最晚幾點要到公司？</button>
+    </div>
+    <div class="row"><input type="text" id="scQ" value="筆電壞了可以自己拿去修嗎？" aria-label="question"></div>
+    <div style="font-size:.85rem;color:var(--fg-muted)"><span lang="zh-Hant">v3 實際搜尋的文字：</span><span lang="en">Text v3 actually searches:</span> <code id="scExpand"></code></div>
+    <div class="cols">
+      <div class="col"><h4>v1</h4><div id="scv1"></div></div>
+      <div class="col"><h4>v2</h4><div id="scv2"></div></div>
+      <div class="col fused"><h4>v3</h4><div id="scv3"></div></div>
+    </div>
+  </div>
+</div>
+
+<h2 id="remaining"><span lang="zh-Hant">剩下的 3 題</span><span lang="en">The remaining three</span></h2>
+<div class="table-wrap">
+<table class="plain">
+  <thead><tr><th><span lang="zh-Hant">問題</span><span lang="en">Question</span></th><th><span lang="zh-Hant">為什麼找不到</span><span lang="en">Why it fails</span></th></tr></thead>
+  <tbody>
+    <tr><td>最晚幾點要到公司？</td><td><span lang="zh-Hant">手冊寫的是「核心工作時間為上午十點」，沒有任何相同的詞。這是「換句話說」，同義詞表也幫不上。</span><span lang="en">The handbook says "core hours start at 10 a.m." with no words in common. It's a paraphrase, beyond any synonym table.</span></td></tr>
+    <tr><td>加班費怎麼算？</td><td><span lang="zh-Hant">只有「加班」兩個字相同，分數 2.16，低於門檻 3.0。門檻的代價。</span><span lang="en">Only 加班 matches, scoring 2.16, below the 3.0 threshold. The cost of the threshold.</span></td></tr>
+    <tr><td>年假要提前多久講？</td><td><span lang="zh-Hant">同義詞讓「特休」被找到，但只有這一個片段相同，分數仍然不夠。</span><span lang="en">The synonym finds 特休, but that's the only shared piece, so the score still falls short.</span></td></tr>
+  </tbody>
+</table>
+</div>
+<p lang="zh-Hant">我們<strong>沒有</strong>為了讓這 3 題通過而修改題目或硬調參數。誠實的測試集應該反映真正的弱點。要解決「換句話說」，需要能理解意思的搜尋方法：<strong>embedding（向量）搜尋</strong>，並和關鍵字搜尋合併使用。這是進階篇<a href="05-retrieval.html">第 05 章</a>的主題。</p>
+<p lang="en">We did <strong>not</strong> reword questions or force parameters to make these pass. An honest test set reflects real weaknesses. Paraphrases need search that understands meaning: <strong>embedding (vector) search</strong>, combined with keyword search. That's the subject of core <a href="05-retrieval.html">chapter 05</a>.</p>
+<div class="callout warn">
+  <span class="label"><span lang="zh-Hant">同義詞表的代價</span><span lang="en">The cost of a synonym table</span></span>
+  <p lang="zh-Hant">同義詞表簡單有效，但要有人維護：新的說法出現時要記得加，加錯了會造成新的誤配（例如把「電腦」對應到「筆記型電腦」，問「電腦密碼」時也會跑去設備那段）。把它當成一份需要測試保護的資料。</p>
+  <p lang="en">A synonym table is simple and effective, but someone must maintain it: new phrasings need adding, and bad entries create new mismatches (mapping 電腦 to 筆記型電腦 also pulls "computer password" questions toward the equipment section). Treat it as data that needs tests.</p>
+</div>
+
+<h2 id="practice"><span lang="zh-Hant">練習</span><span lang="en">Exercises</span></h2>
+<ol lang="zh-Hant">
+  <li>把 <code>min_score</code> 改成 2.0 和 4.0，各跑一次 <code>--search</code>。哪一類題目變好、哪一類變差？</li>
+  <li>在 <code>SYNONYMS</code> 加一條，讓「年假要提前多久講？」通過，然後確認其他題目沒有變差。</li>
+  <li>在 <code>eval_set.jsonl</code> 加 3 題你自己想的問題，至少一題是手冊沒寫的。</li>
+</ol>
+<ol lang="en">
+  <li>Set <code>min_score</code> to 2.0 and 4.0 and run <code>--search</code> for each. Which question types improve and which get worse?</li>
+  <li>Add one synonym entry so 「年假要提前多久講？」 passes, then confirm nothing else regressed.</li>
+  <li>Add 3 questions of your own to <code>eval_set.jsonl</code>, at least one not covered by the handbook.</li>
+</ol>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">1. v1 和 v2 總分都是 11/18。正確的結論是？</span><span lang="en">1. v1 and v2 both score 11/18. The right conclusion?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">v2 沒有用，應該放棄。</span><span lang="en">v2 is useless; drop it.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">兩個版本完全一樣。</span><span lang="en">The two versions are identical.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">它們錯在不同類型的題目；要分類看，才知道各自的優缺點。</span><span lang="en">They fail different kinds of questions; only a per-type breakdown shows each one's strengths.</span></span></label>
+    <div class="explain" lang="zh-Hant">v2 修好了「手冊沒寫卻亂配」，代價是同義詞題變差。總分相同，行為完全不同。</div>
+    <div class="explain" lang="en">v2 fixes false matches at the cost of synonym questions. Same total, completely different behaviour.</div>
+  </fieldset>
+  <fieldset data-answer="a">
+    <legend><span lang="zh-Hant">2. 提高分數門檻，最可能發生什麼？</span><span lang="en">2. What most likely happens when you raise the score threshold?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">亂配變少，但更多正確的段落也會被擋掉。</span><span lang="en">Fewer false matches, but more correct passages get blocked too.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">所有題目都變好。</span><span lang="en">Every question improves.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">完全沒有影響。</span><span lang="en">No effect at all.</span></span></label>
+    <div class="explain" lang="zh-Hant">門檻是「寧可不答」與「盡量回答」之間的取捨，要用測試集找到適合你場景的值。</div>
+    <div class="explain" lang="en">The threshold trades "rather not answer" against "answer whenever possible"; use your test set to pick the right value for your situation.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

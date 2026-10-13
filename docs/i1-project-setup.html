@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="i1-project-setup"
+  data-title-zh="I1 專案起步：第一版機器人 · AI 工程實戰課"
+  data-title-en="I1 Project setup: a first bot · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I1 專案起步：第一版機器人 · AI 工程實戰課</title>
+<meta name="description" content="中級篇第 1 章：開始做一個員工手冊問答機器人。專案結構、集中設定、把 LLM 包成可替換的介面，以及離線假模型的用途。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">中級篇 · 第 1 章</span><span lang="en">Intermediate · Chapter 1</span></div>
+<h1><span lang="zh-Hant">專案起步：第一版機器人</span><span lang="en">Project setup: a first bot</span></h1>
+<p class="lede" lang="zh-Hant">中級篇用六章做完一個真的能用的專案：員工手冊問答機器人。每一章加一個功能，每一個功能都有測試。這一章先把專案的骨架搭好，並做出第一個能回答問題的版本。</p>
+<p class="lede" lang="en">The intermediate track spends six chapters building one real, working project: an employee-handbook Q&amp;A bot. Each chapter adds one feature, and every feature has tests. This chapter sets up the skeleton and gets a first version answering questions.</p>
+<div class="meta"><span>⏱ 20 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>labs/intermediate/</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">這章結束時你會有</span><span lang="en">By the end of this chapter you'll have</span></h2>
+  <ul lang="zh-Hant">
+    <li>一個結構清楚、每個檔案各司其職的專案。</li>
+    <li>一個可以替換的 LLM 介面：同一份程式，可以接真的 Claude，也可以接離線假模型。</li>
+    <li>第一版機器人：搜尋手冊、組 prompt、呼叫 AI。</li>
+  </ul>
+  <ul lang="en">
+    <li>A cleanly structured project where each file has one job.</li>
+    <li>A swappable LLM interface: the same code runs against real Claude or an offline fake.</li>
+    <li>A first bot: search the handbook, build the prompt, call the AI.</li>
+  </ul>
+</section>
+
+<h2 id="goal"><span lang="zh-Hant">最後會做出什麼</span><span lang="en">What we'll end up with</span></h2>
+<p lang="zh-Hant">完成六章之後，在終端機裡會是這樣（這是 <code>python -m labs.intermediate.chat --fake</code> 的實際輸出）：</p>
+<p lang="en">After all six chapters, a terminal session looks like this (actual output of <code>python -m labs.intermediate.chat --fake</code>):</p>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code>模式：離線假模型（規則式，不是 AI）｜登入者：E001
+
+你：我今年還剩幾天特休？
+機器人：你今年還剩 4 天特休（共 10 天，已休 6 天）。〔H01〕
+  ↳ 使用工具 get_leave_balance → {"total": 10, "used": 6, "remaining": 4}
+
+你：公司有員工停車位嗎？
+機器人：手冊沒有寫到這件事，建議詢問人資部門。
+
+你：/usage
+呼叫 3 次｜輸入 1389｜輸出 154｜約 US$0.0086</code></pre>
+</figure>
+<p lang="zh-Hant">注意三件事：回答附上了手冊段落編號、個人資料是透過「工具」查的、手冊沒寫的事它會老實說。這三件事分別是第 2、4、3 章的主題。</p>
+<p lang="en">Notice three things: answers cite the handbook section, personal data comes from a tool, and it admits when the handbook doesn't say. Those are the topics of chapters I2, I4 and I3.</p>
+
+<h2 id="structure"><span lang="zh-Hant">專案結構</span><span lang="en">Project structure</span></h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">檔案</span><span lang="en">File</span></th><th><span lang="zh-Hant">負責</span><span lang="en">Responsibility</span></th><th><span lang="zh-Hant">章節</span><span lang="en">Chapter</span></th></tr></thead>
+  <tbody>
+    <tr><td><code>handbook.md</code></td><td><span lang="zh-Hant">員工手冊（12 段）</span><span lang="en">The employee handbook (12 sections)</span></td><td>I1</td></tr>
+    <tr><td><code>config.py</code></td><td><span lang="zh-Hant">模型名稱、價格、各種上限，集中在一個地方</span><span lang="en">Model name, prices and limits, all in one place</span></td><td>I1</td></tr>
+    <tr><td><code>llm.py</code></td><td><span lang="zh-Hant">呼叫 AI 的介面：<code>ClaudeLLM</code> 與 <code>FakeLLM</code></span><span lang="en">The AI interface: <code>ClaudeLLM</code> and <code>FakeLLM</code></span></td><td>I1</td></tr>
+    <tr><td><code>bot.py</code></td><td><span lang="zh-Hant">把所有零件串起來</span><span lang="en">Wires everything together</span></td><td>I1–I5</td></tr>
+    <tr><td><code>schema.py</code></td><td><span lang="zh-Hant">回答的格式與檢查規則</span><span lang="en">Answer format and validation rules</span></td><td>I2</td></tr>
+    <tr><td><code>search.py</code></td><td><span lang="zh-Hant">搜尋手冊（三個版本）</span><span lang="en">Handbook search (three versions)</span></td><td>I3</td></tr>
+    <tr><td><code>tools.py</code></td><td><span lang="zh-Hant">工具：查特休餘額、今天日期</span><span lang="en">Tools: leave balance, today's date</span></td><td>I4</td></tr>
+    <tr><td><code>evals.py</code>, <code>eval_set.jsonl</code></td><td><span lang="zh-Hant">自動測試整個機器人</span><span lang="en">Automated testing of the whole bot</span></td><td>I6</td></tr>
+    <tr><td><code>chat.py</code></td><td><span lang="zh-Hant">在終端機聊天</span><span lang="en">Chat in the terminal</span></td><td>—</td></tr>
+  </tbody>
+</table>
+</div>
+<p lang="zh-Hant">為什麼要分這麼多檔案？因為每個部分會<strong>各自改變</strong>：換搜尋方法不該動到工具，改回答格式不該動到搜尋。分開之後，每個部分都可以單獨測試。</p>
+<p lang="en">Why so many files? Because each part <strong>changes independently</strong>: swapping the search shouldn't touch the tools, and changing the answer format shouldn't touch the search. Separated, each part can be tested on its own.</p>
+
+<h2 id="config"><span lang="zh-Hant">設定集中在一個地方</span><span lang="en">Keep settings in one place</span></h2>
+<figure class="code"><figcaption><span>labs/intermediate/config.py</span></figcaption>
+<pre><code class="language-python">MODEL = "claude-opus-5-5"
+MAX_TOKENS = 4000
+
+# 每百萬 token 的價格（美元）：(輸入, 輸出)。
+# ⚠ 價格會變動，請以官方定價頁為準。這裡的數字查詢於 2026-10。
+PRICES_PER_MTOK = {
+    "claude-opus-5-5": (4.00, 20.00),
+}
+
+SEARCH_TOP_N = 3          # 每次最多放幾段手冊進 prompt
+MAX_HISTORY_TURNS = 4     # 只保留最近幾輪對話
+MAX_TOOL_ROUNDS = 3       # 一個問題最多呼叫幾輪工具，避免無限迴圈
+MAX_RETRIES = 1           # 回答格式不合格時，最多重試幾次</code></pre>
+</figure>
+<p lang="zh-Hant">每一個「上限」都是刻意的：AI 系統出問題時，常常不是當掉，而是「一直重試」或「一直呼叫工具」，帳單就這樣燒掉了。把上限寫在明顯的地方，是最便宜的保險。</p>
+<p lang="en">Every limit is deliberate: when AI systems misbehave they rarely crash; they retry forever or call tools forever, and that's how bills explode. Putting limits somewhere obvious is the cheapest insurance there is.</p>
+
+<h2 id="interface"><span lang="zh-Hant">把 AI 包成一個可替換的介面</span><span lang="en">Wrap the AI in a swappable interface</span></h2>
+<p lang="zh-Hant">機器人的其他程式只認得一個方法：<code>llm.create(system, messages, tools, output_schema)</code>，回傳一個 <code>Reply</code>。至於背後是誰在回答，它不在乎。</p>
+<p lang="en">The rest of the bot knows exactly one method: <code>llm.create(system, messages, tools, output_schema)</code>, which returns a <code>Reply</code>. It doesn't care who answers behind it.</p>
+<figure class="code"><figcaption><span>labs/intermediate/llm.py</span></figcaption>
+<pre><code class="language-python">@dataclass
+class Reply:
+    content: Any                 # 原封不動放回對話歷史用的內容區塊
+    text: str                    # 所有文字區塊合併
+    tool_calls: list[ToolCall]
+    stop_reason: str             # end_turn / tool_use / max_tokens / refusal ...
+    input_tokens: int
+    output_tokens: int
+
+
+class ClaudeLLM:
+    def __init__(self, model: str = MODEL, max_tokens: int = MAX_TOKENS):
+        import anthropic  # 只有真的要呼叫 API 時才需要安裝
+
+        self.client = anthropic.Anthropic()  # 讀取環境變數 ANTHROPIC_API_KEY
+        self.model = model
+        self.max_tokens = max_tokens
+
+    def create(self, system, messages, tools=None, output_schema=None) -&gt; Reply:
+        kwargs = {"model": self.model, "max_tokens": self.max_tokens,
+                  "system": system, "messages": messages}
+        if tools:
+            kwargs["tools"] = tools
+        if output_schema:
+            kwargs["output_config"] = {"format": {"type": "json_schema", "schema": output_schema}}
+        r = self.client.messages.create(**kwargs)
+        return Reply(
+            content=r.content,
+            text="".join(b.text for b in r.content if b.type == "text"),
+            tool_calls=[ToolCall(b.id, b.name, b.input) for b in r.content if b.type == "tool_use"],
+            stop_reason=r.stop_reason,
+            input_tokens=r.usage.input_tokens,
+            output_tokens=r.usage.output_tokens,
+        )</code></pre>
+</figure>
+
+<h3><span lang="zh-Hant">為什麼需要假模型</span><span lang="en">Why a fake model?</span></h3>
+<p lang="zh-Hant"><code>FakeLLM</code> 不是 AI，它是一組固定的規則：從提供的手冊段落中挑最相近的一段引用、問到特休餘額就呼叫工具。它的用途是：</p>
+<p lang="en"><code>FakeLLM</code> isn't AI. It's a fixed set of rules: quote the most similar handbook passage, call the tool when asked about leave balance. It exists because:</p>
+<ul lang="zh-Hant">
+  <li><strong>開發時不花錢</strong>：搜尋、工具、重試這些流程，用假模型就能測。</li>
+  <li><strong>結果可重現</strong>：真的 AI 每次回答可能不同；測試需要固定的結果，才能判斷是不是你的程式壞了。</li>
+  <li><strong>可以故意犯錯</strong>：<code>FakeLLM(mistakes=["fake_citation"])</code> 會在第一次回答時捏造出處，用來測試第 2 章的重試機制。真的 AI 很難「照指示犯錯」。</li>
+</ul>
+<ul lang="en">
+  <li><strong>It's free during development</strong>: search, tools and retries can all be tested against it.</li>
+  <li><strong>Results are reproducible</strong>: real AI answers vary; tests need fixed results to tell whether <em>your</em> code broke.</li>
+  <li><strong>It can make mistakes on purpose</strong>: <code>FakeLLM(mistakes=["fake_citation"])</code> invents a citation on its first answer, to test chapter I2's retry logic. A real AI is hard to make fail on command.</li>
+</ul>
+<div class="callout warn">
+  <span class="label"><span lang="zh-Hant">假模型的極限</span><span lang="en">Limits of the fake</span></span>
+  <p lang="zh-Hant">假模型能驗證的是「流程對不對」，不是「回答好不好」。回答品質一定要用真的模型測（第 6 章的 <code>--real</code>）。</p>
+  <p lang="en">The fake verifies that the <em>pipeline</em> works, not that answers are <em>good</em>. Answer quality must be tested with the real model (chapter I6's <code>--real</code>).</p>
+</div>
+
+<h2 id="first"><span lang="zh-Hant">第一版：搜尋 → 組 prompt → 呼叫</span><span lang="en">First version: search → prompt → call</span></h2>
+<p lang="zh-Hant">流程和入門篇 B4 一樣，只是現在分工清楚。規則寫在 system prompt，手冊段落與問題放在使用者訊息：</p>
+<p lang="en">The flow is the same as basics chapter B4, now with clear responsibilities. Rules go in the system prompt; handbook passages and the question go in the user message:</p>
+<figure class="code"><figcaption><span>labs/intermediate/bot.py</span></figcaption>
+<pre><code class="language-python">SYSTEM_PROMPT = """你是「星河軟體」的員工手冊助理，回答員工關於公司規定的問題。
+
+規則：
+1. 只根據 &lt;手冊&gt; 裡的段落，或工具查到的結果回答。不要用一般常識補充公司規定。
+2. 回答要附上引用的段落編號（例如 H01）。
+3. 如果手冊和工具都沒有答案，found 設為 false，並建議詢問人資部門。不要猜。
+4. 問到個人資料（例如自己還剩幾天特休）時，使用工具查詢。
+5. 用繁體中文，簡潔回答。"""
+
+
+def build_user_message(question: str, hits) -&gt; str:
+    if hits:
+        context = "\n".join(f"[{h.chunk.id}] {h.chunk.full}" for h in hits)
+    else:
+        context = "（沒有找到相關段落）"
+    return f"&lt;手冊&gt;\n{context}\n&lt;/手冊&gt;\n\n問題：{question}"</code></pre>
+</figure>
+<p lang="zh-Hant">為什麼規則放 system、資料放 user？system prompt 是「每一輪都一樣」的部分，固定不變也比較容易被快取（第 5 章）；每一題不同的內容放在使用者訊息裡。</p>
+<p lang="en">Why rules in system and data in user? The system prompt is the part that's identical every turn, and keeping it fixed makes caching easier (chapter I5); content that changes per question goes in the user message.</p>
+
+<h2 id="run"><span lang="zh-Hant">動手做</span><span lang="en">Do it</span></h2>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash">python -m labs.intermediate.chat --fake          # 離線假模型
+
+# 用真的 Claude（需要 pip install anthropic 與 API key）
+export ANTHROPIC_API_KEY=...                     # Windows PowerShell: $env:ANTHROPIC_API_KEY="..."
+python -m labs.intermediate.chat
+
+python -m pytest labs/intermediate -q            # 跑中級篇的測試</code></pre>
+</figure>
+<h3><span lang="zh-Hant">練習</span><span lang="en">Exercise</span></h3>
+<p lang="zh-Hant">在 <code>config.py</code> 把 <code>SEARCH_TOP_N</code> 改成 1，再用 <code>--fake</code> 問「病假超過幾天要附醫生證明？」。答案有變嗎？想想看：放進 prompt 的段落越少，有什麼好處和壞處？</p>
+<p lang="en">Set <code>SEARCH_TOP_N</code> to 1 in <code>config.py</code> and ask (with <code>--fake</code>) 「病假超過幾天要附醫生證明？」. Did the answer change? What are the pros and cons of putting fewer passages in the prompt?</p>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">1. 為什麼要把 LLM 包成 <code>llm.create(...)</code> 這樣的介面，而不是在 bot 裡直接呼叫 anthropic SDK？</span><span lang="en">1. Why wrap the LLM behind <code>llm.create(...)</code> instead of calling the anthropic SDK directly in the bot?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">因為直接呼叫 SDK 比較慢。</span><span lang="en">Calling the SDK directly is slower.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">這樣可以換成假模型做測試，或換成其他 provider，而不用改 bot 的程式。</span><span lang="en">So you can swap in a fake for testing, or another provider, without changing the bot.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">SDK 規定一定要這樣寫。</span><span lang="en">The SDK requires it.</span></span></label>
+    <div class="explain" lang="zh-Hant">bot 只依賴介面，不依賴實作，這讓測試與替換都變得容易。</div>
+    <div class="explain" lang="en">The bot depends on an interface, not an implementation, which makes testing and swapping easy.</div>
+  </fieldset>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">2. 假模型的測試全部通過，代表什麼？</span><span lang="en">2. All tests pass against the fake model. What does that tell you?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">機器人的回答品質很好，可以上線。</span><span lang="en">Answer quality is good; ship it.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">什麼都不代表。</span><span lang="en">Nothing at all.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">程式的流程（搜尋、工具、檢查、重試）是對的；回答品質還要用真的模型驗證。</span><span lang="en">The pipeline (search, tools, validation, retries) works; answer quality still needs the real model.</span></span></label>
+    <div class="explain" lang="zh-Hant">兩種測試回答不同的問題：假模型測「程式對不對」，真模型測「回答好不好」。</div>
+    <div class="explain" lang="en">The two kinds of test answer different questions: the fake tests "is the code right", the real model tests "are the answers good".</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

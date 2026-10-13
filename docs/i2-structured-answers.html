@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="i2-structured-answers"
+  data-title-zh="I2 結構化回答與出處檢查 · AI 工程實戰課"
+  data-title-en="I2 Structured answers and citations · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I2 結構化回答與出處檢查 · AI 工程實戰課</title>
+<meta name="description" content="中級篇第 2 章：讓機器人用固定的 JSON 格式回答，用 Pydantic 檢查出處是否真的來自搜尋結果，不合格就把錯誤回饋給 AI 重試。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/demos/handbook_data.js"></script>
+<script defer src="assets/demos/intermediate.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">中級篇 · 第 2 章</span><span lang="en">Intermediate · Chapter 2</span></div>
+<h1><span lang="zh-Hant">結構化回答與出處檢查</span><span lang="en">Structured answers and citations</span></h1>
+<p class="lede" lang="zh-Hant">如果 AI 回傳的是一段自由文字，你的程式只能原封不動地顯示它，沒辦法檢查。改成固定格式之後，程式就能問：「你說找到答案了，出處呢？那個出處真的是我給你的嗎？」</p>
+<p class="lede" lang="en">If the AI returns free text, your code can only display it as-is; it can't check anything. With a fixed format, code can ask: "You say you found the answer. Where's the source? Is that source really one I gave you?"</p>
+<div class="meta"><span>⏱ 20 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>schema.py</code> · <code>bot.py</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">這章要加的功能</span><span lang="en">What this chapter adds</span></h2>
+  <ul lang="zh-Hant">
+    <li>機器人用 JSON 回答：<code>found</code>、<code>answer</code>、<code>citations</code>。</li>
+    <li>用 Pydantic 檢查三條規則，特別是「出處必須是這次真的搜尋到的段落」。</li>
+    <li>不合格時，把錯誤告訴 AI，讓它重試一次。</li>
+  </ul>
+  <ul lang="en">
+    <li>The bot answers in JSON: <code>found</code>, <code>answer</code>, <code>citations</code>.</li>
+    <li>Pydantic checks three rules, above all "citations must be passages actually retrieved this time".</li>
+    <li>On failure, tell the AI what was wrong and let it retry once.</li>
+  </ul>
+</section>
+
+<h2 id="format"><span lang="zh-Hant">回答的格式</span><span lang="en">The answer format</span></h2>
+<figure class="code"><figcaption><span><span lang="zh-Hant">範例</span><span lang="en">Example</span></span></figcaption>
+<pre><code class="language-json">{"found": true, "answer": "請特休需在三個工作天前提出申請。", "citations": ["H01"]}</code></pre>
+</figure>
+<p lang="zh-Hant"><code>found</code> 是這個格式最重要的欄位。它讓 AI 有一個正式的方式說「我不知道」，程式也能據此決定要不要顯示「請洽人資」的按鈕。</p>
+<p lang="en"><code>found</code> is the most important field. It gives the AI an official way to say "I don't know", and lets code decide whether to show a "contact HR" button.</p>
+
+<h2 id="two-layers"><span lang="zh-Hant">兩層檢查：結構交給 API，規則交給你</span><span lang="en">Two layers: structure by the API, rules by you</span></h2>
+<p lang="zh-Hant">我們把一份 JSON Schema 交給 API，它會確保輸出一定是合法的 JSON、欄位一定齊全（這叫 structured output）。但 API 不知道你的業務規則，例如「出處必須是這次提供的段落」。所以規則寫在 Pydantic 模型裡，由你的程式檢查。</p>
+<p lang="en">We hand the API a JSON Schema, and it guarantees valid JSON with every field present (this is called structured output). But the API doesn't know your business rules, such as "citations must be passages provided this time". Those live in a Pydantic model that your code checks.</p>
+<figure class="code"><figcaption><span>labs/intermediate/schema.py</span></figcaption>
+<pre><code class="language-python"># 送給 API 的 JSON Schema：只放結構（型別、必填）
+ANSWER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "found": {"type": "boolean", "description": "手冊或工具結果裡有沒有這個問題的答案"},
+        "answer": {"type": "string", "description": "給員工看的回答，繁體中文，簡潔"},
+        "citations": {"type": "array", "items": {"type": "string"}, "description": "引用的段落編號，例如 H01"},
+    },
+    "required": ["found", "answer", "citations"],
+    "additionalProperties": False,
+}
+
+
+class BotAnswer(BaseModel):
+    found: bool
+    answer: str = Field(min_length=1)
+    citations: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def check_citations(self, info: ValidationInfo) -&gt; "BotAnswer":
+        ctx = info.context or {}
+        retrieved = set(ctx.get("retrieved_ids", []))
+        used_tool = ctx.get("used_tool", False)
+
+        if self.found and not self.citations and not used_tool:
+            raise ValueError("found 為 true 時，citations 不能是空的：請附上段落編號")
+        if not self.found and self.citations:
+            raise ValueError("found 為 false 時，不應該有 citations")
+        unknown = [c for c in self.citations if c not in retrieved]
+        if unknown:
+            raise ValueError(f"引用了這次沒有提供的段落：{', '.join(unknown)}；只能引用 {sorted(retrieved)}")
+        return self</code></pre>
+</figure>
+<div class="callout tip">
+  <span class="label"><span lang="zh-Hant">重點</span><span lang="en">Key point</span></span>
+  <p lang="zh-Hant"><code>context</code> 是 Pydantic 的功能：驗證時可以把「這次的情境」傳進去（這次搜尋到哪些段落、有沒有用工具）。同一個模型，每次驗證的標準可以不同。</p>
+  <p lang="en"><code>context</code> is a Pydantic feature: you can pass the situation into validation (which passages were retrieved, whether a tool was used). The same model applies different standards each time.</p>
+</div>
+
+<h2 id="demo"><span lang="zh-Hant">動手試：哪些回答會被擋下？</span><span lang="en">Try it: which answers get rejected?</span></h2>
+<div class="demo" id="answerDemo">
+  <div class="demo-head"><span class="tag">demo</span><h3><span lang="zh-Hant">回答檢查（這次搜尋到 H01、H03）</span><span lang="en">Answer check (this time H01 and H03 were retrieved)</span></h3></div>
+  <div class="demo-body">
+    <div class="row">
+      <button class="chip" data-p="good"><span lang="zh-Hant">正確</span><span lang="en">Valid</span></button>
+      <button class="chip" data-p="nocite"><span lang="zh-Hant">沒附出處</span><span lang="en">No citation</span></button>
+      <button class="chip" data-p="fake"><span lang="zh-Hant">捏造出處</span><span lang="en">Fabricated citation</span></button>
+      <button class="chip" data-p="notfound"><span lang="zh-Hant">誠實說沒有</span><span lang="en">Honest "not found"</span></button>
+      <button class="chip" data-p="contradict"><span lang="zh-Hant">自相矛盾</span><span lang="en">Self-contradictory</span></button>
+    </div>
+    <textarea spellcheck="false" style="min-height:90px" aria-label="answer JSON"></textarea>
+    <label style="display:flex;gap:.4rem;align-items:center;font-size:.9rem"><input type="checkbox" id="adTool">
+      <span><span lang="zh-Hant">這次有使用工具（工具查到的答案可以沒有手冊出處）</span><span lang="en">A tool was used this time (tool-based answers may lack handbook citations)</span></span></label>
+    <div class="output" aria-live="polite"></div>
+  </div>
+</div>
+
+<h2 id="retry"><span lang="zh-Hant">不合格就重試一次</span><span lang="en">Retry once on failure</span></h2>
+<p lang="zh-Hant">檢查失敗時，我們把 AI 的回答和具體的錯誤訊息加進對話，請它修正。注意兩個細節：重試次數有上限（<code>MAX_RETRIES = 1</code>）；超過上限就回報錯誤，<strong>不要</strong>偷偷顯示不合格的回答。</p>
+<p lang="en">When validation fails, we append the AI's answer and the specific error to the conversation and ask for a fix. Two details: retries are capped (<code>MAX_RETRIES = 1</code>), and when the cap is hit we report an error rather than quietly showing a rejected answer.</p>
+<figure class="code"><figcaption><span>labs/intermediate/bot.py</span></figcaption>
+<pre><code class="language-python">used_tool = bool(turn.tool_calls)
+for attempt in range(config.MAX_RETRIES + 1):
+    turn.attempts = attempt + 1
+    try:
+        turn.answer = parse_answer(reply.text, retrieved, used_tool)
+        break
+    except ValidationError as err:
+        if attempt == config.MAX_RETRIES:
+            turn.error = "回答格式檢查失敗：" + "; ".join(e["msg"] for e in err.errors())
+            return self._finish(turn)
+        feedback = "你上一次的回答沒有通過檢查：\n" + "\n".join(f"- {e['msg']}" for e in err.errors()) + \
+                   "\n請修正後重新回答，只輸出 JSON。"
+        messages += [{"role": "assistant", "content": reply.content}, {"role": "user", "content": feedback}]
+        reply = self._call(messages, turn, tools=False)</code></pre>
+</figure>
+<p lang="zh-Hant">測試裡用 <code>FakeLLM(mistakes=["fake_citation"])</code> 讓第一次回答引用不存在的 H99，確認機器人會重試並得到正確的 H03；連續犯錯三次，則確認它會放棄並回報錯誤。</p>
+<p lang="en">The tests use <code>FakeLLM(mistakes=["fake_citation"])</code> to make the first answer cite a non-existent H99, checking that the bot retries and gets H03; with three consecutive mistakes, they check that it gives up and reports an error.</p>
+
+<h2 id="limits"><span lang="zh-Hant">它擋不住什麼</span><span lang="en">What it can't catch</span></h2>
+<p lang="zh-Hant">這些檢查只能確認「格式對、出處存在」。如果 AI 引用了 H01，但把「三個工作天」說成「五個工作天」，這裡是抓不到的。那要靠第 6 章的測試題，以及進階篇第 04、07 章的方法。</p>
+<p lang="en">These checks only confirm "correct format, real source". If the AI cites H01 but says "five working days" instead of "three", nothing here catches it. That takes chapter I6's test questions, and the methods in core chapters 04 and 07.</p>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="a">
+    <legend><span lang="zh-Hant">1. 這次搜尋到 H01、H03，AI 回答引用了 H07。應該怎麼處理？</span><span lang="en">1. H01 and H03 were retrieved, but the AI cites H07. What should happen?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">判定不合格，把錯誤告訴 AI 重試；仍失敗就回報錯誤。</span><span lang="en">Reject it, tell the AI and retry; if it still fails, report an error.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">接受，H07 也是手冊裡的段落。</span><span lang="en">Accept it; H07 is a real handbook section.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">把 H07 從回答裡刪掉，其餘照樣顯示。</span><span lang="en">Strip H07 and show the rest.</span></span></label>
+    <div class="explain" lang="zh-Hant">AI 沒有看到 H07 的內容，引用它代表答案可能是憑空來的。刪掉出處只是把問題藏起來。</div>
+    <div class="explain" lang="en">The AI never saw H07, so citing it suggests the answer came from nowhere. Stripping the citation just hides the problem.</div>
+  </fieldset>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">2. 為什麼不把所有規則都寫進送給 API 的 JSON Schema？</span><span lang="en">2. Why not put every rule into the JSON Schema sent to the API?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">因為 JSON Schema 太難寫。</span><span lang="en">JSON Schema is too hard to write.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">有些規則取決於這次的情境（搜尋到哪些段落），而且 API 不一定支援所有 schema 關鍵字。</span><span lang="en">Some rules depend on this request's situation (which passages were retrieved), and APIs don't support every schema keyword.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">因為放進 schema 會比較貴。</span><span lang="en">It costs more to put them in the schema.</span></span></label>
+    <div class="explain" lang="zh-Hant">schema 是固定的，但「可以引用哪些段落」每次都不同，只能在你的程式裡檢查。</div>
+    <div class="explain" lang="en">The schema is fixed, but which passages may be cited changes every time, so only your code can check it.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

@@ -21,6 +21,17 @@ production in customer environments. Every chapter maps to offline, tested Pytho
 | B4 | 讓 AI 讀你的文件 | Answering from your documents | `labs/beginner/handbook_qa.py` |
 | B5 | 它做得好嗎？簡單的測試 | Is it any good? Simple tests | `labs/beginner/check_answers.py` |
 
+**中級篇 / Intermediate** — 從頭做一個員工手冊問答機器人 / build an employee-handbook bot from scratch
+
+| # | 章節 | Chapter | 練習 / Lab |
+|---|------|---------|-----------|
+| I1 | 專案起步：第一版機器人 | Project setup: a first bot | `labs/intermediate/llm.py`, `bot.py` |
+| I2 | 結構化回答與出處檢查 | Structured answers and citations | `labs/intermediate/schema.py` |
+| I3 | 更好的搜尋，並量出差別 | Better search, measured | `labs/intermediate/search.py` |
+| I4 | 工具呼叫：查個人資料 | Tool calls: personal data | `labs/intermediate/tools.py` |
+| I5 | 對話記憶與成本 | Conversation memory and cost | `labs/intermediate/bot.py` |
+| I6 | 自動測試整個機器人 | Testing the whole bot | `labs/intermediate/evals.py` |
+
 **進階篇 / Core course** — 給有經驗的工程師 / for experienced engineers
 
 | # | 章節 | Chapter | 練習 / Lab |
@@ -35,9 +46,9 @@ production in customer environments. Every chapter maps to offline, tested Pytho
 | 8 | 上線：可觀測性、安全與成本 | Production: observability, security, cost | |
 | 9 | 實作練習與延伸資源 | Labs and further reading | |
 
-入門篇每一章與進階篇第 4 到 7 章都有瀏覽器內的互動示範，使用和 Python 練習相同的演算法（檢索示範已驗證與 Python 結果一致）。
+入門篇每一章、中級篇第 2 到 5 章與進階篇第 4 到 7 章都有瀏覽器內的互動示範，使用和 Python 練習相同的演算法（檢索示範已驗證與 Python 結果一致）。
 
-Every basics chapter and core chapters 4–7 include an in-browser demo running the same algorithms as the Python labs
+Every basics chapter, intermediate chapters 2–5 and core chapters 4–7 include an in-browser demo running the same algorithms as the Python labs
 (the retrieval demo is verified to match the Python results exactly).
 
 ## 使用 / Usage
@@ -58,7 +69,7 @@ To publish on GitHub Pages: Settings → Pages → deploy from the `/docs` folde
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest                     # 66 tests
+python -m pytest                     # 90 tests
 python -m labs.core.evals            # eval gate against labs/core/baseline.json
 python -m labs.mcp_sre.cli --stdio   # MCP server over a real stdio subprocess
 ```
@@ -69,6 +80,7 @@ python -m labs.mcp_sre.cli --stdio   # MCP server over a real stdio subprocess
 docs/                    網站 / website (static HTML, no build step)
   index.html             首頁、課程地圖、自我評估
   b1-…b5-*.html          入門篇五章
+  i1-…i6-*.html          中級篇六章
   01-…09-*.html          進階篇九章
   glossary.html          詞彙表
   assets/site.css        設計系統：顏色變數、深淺色、版面
@@ -76,6 +88,8 @@ docs/                    網站 / website (static HTML, no build step)
   assets/demos/*.js      互動示範（basics.js 為入門篇）
 labs/
   beginner/              入門篇：猜下一個字、第一次呼叫 API、手冊問答、考卷
+  intermediate/          中級篇：員工手冊機器人（搜尋、結構化回答、工具、記憶、評測）
+scripts/build_demo_data.py  由 Python 程式重新產生網頁示範資料
   core/                  第 4–7 章：契約、檢索、agent、評測
   code_reviewer/         AST 靜態分析 + 選用 LLM 補充
   mcp_sre/               最小 MCP server/client + SRE 診斷 workflow

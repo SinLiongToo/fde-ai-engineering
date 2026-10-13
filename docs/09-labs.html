@@ -38,7 +38,7 @@ python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-python -m pytest                   # 66 passed</code></pre>
+python -m pytest                   # 90 passed</code></pre>
 </figure>
 
 <h2 id="lab-basics"><span lang="zh-Hant">入門篇練習</span><span lang="en">Basics exercises</span></h2>
@@ -66,6 +66,18 @@ python -m pytest                   # 66 passed</code></pre>
   <li>Add a synonym table to <code>handbook_qa.py</code> (e.g. 筆電 → 筆記型電腦) so exam question 5 passes.</li>
   <li>Add three questions to <code>check_answers.py</code>, including one trick question.</li>
 </ol>
+
+<h2 id="lab-intermediate"><span lang="zh-Hant">中級篇專案：員工手冊機器人</span><span lang="en">Intermediate project: the handbook bot</span></h2>
+<p lang="zh-Hant">對應中級篇 I1 到 I6。完整的小型應用，每個功能都有測試；沒有 API key 時自動使用離線假模型。</p>
+<p lang="en">Covers intermediate chapters I1–I6. A complete small application with tests for every feature; without an API key it uses the offline fake model.</p>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash">python -m labs.intermediate.chat --fake          # 聊天（I1–I5）
+python -m labs.intermediate.evals --search       # 比較三個搜尋版本（I3）
+python -m labs.intermediate.evals                # 評測整個機器人（I6）
+python -m pytest labs/intermediate               # 單元測試</code></pre>
+</figure>
+<p lang="zh-Hant">每章的練習寫在各章頁面最後。修改手冊、同義詞或價格之後，執行 <code>python scripts/build_demo_data.py</code> 更新網頁示範的資料。</p>
+<p lang="en">Each chapter's exercises are at the end of its page. After changing the handbook, synonyms or prices, run <code>python scripts/build_demo_data.py</code> to refresh the web demos' data.</p>
 
 <h2 id="lab-core"><span lang="zh-Hant">練習 1：核心模式</span><span lang="en">Lab 1: core patterns</span></h2>
 <p lang="zh-Hant">對應第 4 到 7 章。每個模組都可以單獨執行，看看它在做什麼。</p>

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="i6-testing"
+  data-title-zh="I6 自動測試整個機器人 · AI 工程實戰課"
+  data-title-en="I6 Testing the whole bot · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I6 自動測試整個機器人 · AI 工程實戰課</title>
+<meta name="description" content="中級篇第 6 章：兩種測試搭配使用。pytest 單元測試保護程式的每個零件，評測集逐題檢查搜尋、內容、誠實與工具；用基準防止退步，並了解假模型與真模型測試的分工。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">中級篇 · 第 6 章</span><span lang="en">Intermediate · Chapter 6</span></div>
+<h1><span lang="zh-Hant">自動測試整個機器人</span><span lang="en">Testing the whole bot</span></h1>
+<p class="lede" lang="zh-Hant">機器人有了搜尋、格式檢查、工具、記憶。每改一個地方，都可能影響其他地方。這一章把入門篇 B5 的「考卷」升級成兩種測試，讓你每次修改後幾秒內就知道有沒有弄壞東西。</p>
+<p class="lede" lang="en">The bot now has search, validation, tools and memory, and changing one part can affect the others. This chapter upgrades the B5 "exam" into two kinds of test that tell you within seconds whether a change broke something.</p>
+<div class="meta"><span>⏱ 20 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>evals.py</code> · <code>eval_set.jsonl</code> · <code>tests/</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">這章要加的功能</span><span lang="en">What this chapter adds</span></h2>
+  <ul lang="zh-Hant">
+    <li>單元測試：用 pytest 檢查每個零件（搜尋、格式檢查、工具、迴圈上限）。</li>
+    <li>評測集：18 題真實問題，逐題檢查四件事。</li>
+    <li>基準：分數變差就失敗，放進 CI 自動執行。</li>
+  </ul>
+  <ul lang="en">
+    <li>Unit tests: pytest checks each part (search, validation, tools, loop limits).</li>
+    <li>An eval set: 18 realistic questions, each checked four ways.</li>
+    <li>A baseline: fail when the score drops, run automatically in CI.</li>
+  </ul>
+</section>
+
+<h2 id="two-kinds"><span lang="zh-Hant">兩種測試，回答兩種問題</span><span lang="en">Two kinds of test, two questions</span></h2>
+<div class="grid">
+  <div class="card"><span class="kicker"><span lang="zh-Hant">單元測試</span><span lang="en">Unit tests</span></span><h3><span lang="zh-Hant">程式的每個零件對不對？</span><span lang="en">Is each part of the code right?</span></h3>
+    <p lang="zh-Hant">結果固定（用假模型）、跑得很快、每次修改都跑。例如：捏造出處時會不會重試？工具迴圈會不會停？</p>
+    <p lang="en">Deterministic (fake model), fast, run on every change. For example: does a fabricated citation trigger a retry? Does the tool loop stop?</p></div>
+  <div class="card"><span class="kicker"><span lang="zh-Hant">評測</span><span lang="en">Evals</span></span><h3><span lang="zh-Hant">整個機器人回答得好不好？</span><span lang="en">Does the whole bot answer well?</span></h3>
+    <p lang="zh-Hant">用一組真實問題逐題檢查。用假模型時檢查流程；用真模型時檢查回答品質。</p>
+    <p lang="en">Checks a set of realistic questions one by one. With the fake it checks the pipeline; with the real model it checks answer quality.</p></div>
+</div>
+
+<h2 id="unit"><span lang="zh-Hant">單元測試：測「會出事」的地方</span><span lang="en">Unit tests: test what can go wrong</span></h2>
+<p lang="zh-Hant">好的單元測試不是只測「正常情況會成功」，而是測那些<strong>出事時會很嚴重</strong>的地方。以下是 <code>tests/test_intermediate.py</code> 的幾個例子：</p>
+<p lang="en">Good unit tests don't just check the happy path; they target what would be <strong>serious if it broke</strong>. Some examples from <code>tests/test_intermediate.py</code>:</p>
+<figure class="code"><figcaption><span>labs/intermediate/tests/test_intermediate.py</span></figcaption>
+<pre><code class="language-python">def test_tools_take_no_employee_id():
+    # 權限：沒有任何工具能讓 AI 指定要查誰
+    for tool in TOOLS:
+        assert "employee_id" not in tool["input_schema"]["properties"]
+
+
+def test_retry_fixes_fake_citation():
+    # 第一次故意捏造出處，確認會重試並修正
+    t = HandbookBot(FakeLLM(mistakes=["fake_citation"])).ask("事假一年可以請幾天？")
+    assert t.attempts == 2 and t.answer.citations == ["H03"]
+
+
+class LoopingLLM:
+    """永遠要求用工具的模型，用來測試迴圈上限。"""
+    def create(self, system, messages, tools=None, output_schema=None):
+        call = ToolCall("t1", "get_today", {})
+        return Reply([...], "", [call], "tool_use", 10, 10)
+
+
+def test_tool_rounds_are_capped():
+    # 成本：模型一直要工具時，迴圈一定會停
+    t = HandbookBot(LoopingLLM()).ask("今天幾號？")
+    assert "超過" in t.error and len(t.tool_calls) == config.MAX_TOOL_ROUNDS</code></pre>
+</figure>
+<p lang="zh-Hant">注意 <code>LoopingLLM</code>：為了測一個很少發生、但發生了很貴的情況，我們寫了一個「故意壞掉」的模型。這就是第 1 章把 LLM 包成介面的回報。</p>
+<p lang="en">Note <code>LoopingLLM</code>: to test a rare but expensive situation, we wrote a deliberately broken model. That's the payoff from wrapping the LLM in an interface in chapter I1.</p>
+
+<h2 id="evals"><span lang="zh-Hant">評測集：每題檢查四件事</span><span lang="en">The eval set: four checks per question</span></h2>
+<figure class="code"><figcaption><span>labs/intermediate/eval_set.jsonl</span><span lang="zh-Hant">（節錄）</span><span lang="en"> (excerpt)</span></figcaption>
+<pre><code class="language-json">{"id": "wfh-synonym", "question": "一週可以在家上班幾天？", "relevant": ["H05"], "must_include": ["兩天"], "tags": ["synonym"]}
+{"id": "no-parking", "question": "公司有員工停車位嗎？", "relevant": [], "expect_not_found": true, "tags": ["not-in-handbook"]}
+{"id": "tool-balance", "question": "我今年還剩幾天特休？", "relevant": ["H01"], "must_include": ["4"], "expect_tool": "get_leave_balance", "tags": ["tool"]}</code></pre>
+</figure>
+<div class="table-wrap">
+<table class="plain">
+  <thead><tr><th><span lang="zh-Hant">檢查</span><span lang="en">Check</span></th><th><span lang="zh-Hant">內容</span><span lang="en">What it verifies</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">搜尋</span><span lang="en">Search</span></td><td><span lang="zh-Hant">相關段落有沒有被找到；手冊沒寫的題目，應該什麼都找不到</span><span lang="en">The relevant passage was found; for not-in-handbook questions, nothing should be found</span></td></tr>
+    <tr><td><span lang="zh-Hant">內容</span><span lang="en">Content</span></td><td><span lang="zh-Hant">答案包含關鍵字（例如「兩天」）</span><span lang="en">The answer contains the key fact (e.g. 兩天)</span></td></tr>
+    <tr><td><span lang="zh-Hant">誠實</span><span lang="en">Honesty</span></td><td><span lang="zh-Hant">手冊沒寫的題目，<code>found</code> 必須是 false</span><span lang="en">For not-in-handbook questions, <code>found</code> must be false</span></td></tr>
+    <tr><td><span lang="zh-Hant">工具</span><span lang="en">Tools</span></td><td><span lang="zh-Hant">該用工具的題目，有沒有真的呼叫</span><span lang="en">Questions that need a tool actually called it</span></td></tr>
+  </tbody>
+</table>
+</div>
+<figure class="code"><figcaption><span><span lang="zh-Hant">python -m labs.intermediate.evals 的輸出（節錄）</span><span lang="en">Output of python -m labs.intermediate.evals (excerpt)</span></span></figcaption>
+<pre><code>✓ annual-notice    請特休要提前幾天申請？
+✗ annual-synonym   年假要提前多久講？
+      搜尋：找到 []，應該是 ['H01']
+      內容：答案沒有「三個工作天」
+✗ core-hours       最晚幾點要到公司？
+      搜尋：找到 []，應該是 ['H04']
+      內容：答案沒有「十點」
+✓ laptop-synonym   筆電壞了可以自己拿去修嗎？
+✓ no-parking       公司有員工停車位嗎？
+✓ tool-balance     我今年還剩幾天特休？
+...
+{"cases": 18, "passed": 15, "pass_rate": 0.8333}</code></pre>
+</figure>
+<p lang="zh-Hant">失敗訊息直接指出是哪一步出問題：這兩題都是「搜尋」沒找到，所以要改的是搜尋（第 3 章），不是 prompt。分開檢查每一步，才知道該修哪裡。</p>
+<p lang="en">The failure messages point straight at the broken step: both failed at search, so the fix belongs in search (chapter I3), not the prompt. Checking each step separately tells you where to look.</p>
+
+<h2 id="baseline"><span lang="zh-Hant">基準與 CI</span><span lang="en">Baseline and CI</span></h2>
+<p lang="zh-Hant">確認結果合理後，執行 <code>--update-baseline</code> 把分數存成基準。之後只要分數低於基準，<code>evals.py</code> 就會以失敗結束，CI 會擋下這次修改。這個專案的 GitHub Actions 已經設定好，每次推送都會跑全部測試。</p>
+<p lang="en">Once the results look right, run <code>--update-baseline</code> to save the score. From then on, a lower score makes <code>evals.py</code> exit with failure and CI blocks the change. This project's GitHub Actions already runs every test on each push.</p>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash">python -m pytest labs/intermediate                    # 單元測試
+python -m labs.intermediate.evals                     # 評測（假模型），比較基準
+python -m labs.intermediate.evals --update-baseline   # 人確認過後才更新基準
+python -m labs.intermediate.evals --real              # 真模型（要 API key、會花錢、分數會浮動）</code></pre>
+</figure>
+
+<h2 id="fake-vs-real"><span lang="zh-Hant">假模型與真模型的分工</span><span lang="en">Fake vs. real model</span></h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th></th><th><span lang="zh-Hant">假模型</span><span lang="en">Fake</span></th><th><span lang="zh-Hant">真模型</span><span lang="en">Real</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">驗證</span><span lang="en">Verifies</span></td><td><span lang="zh-Hant">流程：搜尋、工具、檢查、重試</span><span lang="en">The pipeline: search, tools, checks, retries</span></td><td><span lang="zh-Hant">回答品質</span><span lang="en">Answer quality</span></td></tr>
+    <tr><td><span lang="zh-Hant">成本</span><span lang="en">Cost</span></td><td><span lang="zh-Hant">免費</span><span lang="en">Free</span></td><td><span lang="zh-Hant">每次都要付費</span><span lang="en">Paid every run</span></td></tr>
+    <tr><td><span lang="zh-Hant">結果</span><span lang="en">Results</span></td><td><span lang="zh-Hant">每次相同</span><span lang="en">Identical every time</span></td><td><span lang="zh-Hant">會浮動，要看趨勢</span><span lang="en">Vary; look at trends</span></td></tr>
+    <tr><td><span lang="zh-Hant">什麼時候跑</span><span lang="en">When</span></td><td><span lang="zh-Hant">每次修改（CI）</span><span lang="en">Every change (CI)</span></td><td><span lang="zh-Hant">改 prompt、換模型、上線前</span><span lang="en">Prompt changes, model switches, before launch</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="done"><span lang="zh-Hant">中級篇完成了</span><span lang="en">You've finished the intermediate track</span></h2>
+<p lang="zh-Hant">你做出了一個完整的小型 AI 應用：會搜尋、會檢查自己的回答、會用工具、記得對話、知道花了多少錢，而且每個部分都有測試。這已經是很多公司內部工具的實際樣貌。</p>
+<p lang="en">You've built a complete small AI application: it searches, checks its own answers, uses tools, remembers the conversation, knows what it costs, and every part is tested. That's what many real internal tools actually look like.</p>
+<p lang="zh-Hant">進階篇處理的是「把這種系統放到客戶的正式環境」時會遇到的問題：</p>
+<p lang="en">The core course tackles what happens when you put systems like this into a customer's production environment:</p>
+<div class="table-wrap">
+<table class="plain">
+  <thead><tr><th><span lang="zh-Hant">中級篇做到</span><span lang="en">Intermediate covered</span></th><th><span lang="zh-Hant">進階篇延伸</span><span lang="en">Core extends to</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">I2 出處檢查與重試</span><span lang="en">I2 Citation checks and retries</span></td><td><a href="04-structured-output.html"><span lang="zh-Hant">04 各家 API 的限制、schema 設計</span><span lang="en">04 Provider limits, schema design</span></a></td></tr>
+    <tr><td><span lang="zh-Hant">I3 關鍵字搜尋與同義詞</span><span lang="en">I3 Keyword search and synonyms</span></td><td><a href="05-retrieval.html"><span lang="zh-Hant">05 向量搜尋、混合檢索、權限過濾</span><span lang="en">05 Vector search, hybrid retrieval, permissions</span></a></td></tr>
+    <tr><td><span lang="zh-Hant">I4 唯讀工具</span><span lang="en">I4 Read-only tools</span></td><td><a href="06-agents.html"><span lang="zh-Hant">06 會改資料的工具、人工核准、狀態保存</span><span lang="en">06 Data-changing tools, human approval, durable state</span></a></td></tr>
+    <tr><td><span lang="zh-Hant">I5 用量與費用</span><span lang="en">I5 Usage and cost</span></td><td><a href="08-production.html"><span lang="zh-Hant">08 監控、提示注入、可靠性、分階段上線</span><span lang="en">08 Monitoring, prompt injection, reliability, staged rollout</span></a></td></tr>
+    <tr><td><span lang="zh-Hant">I6 評測與基準</span><span lang="en">I6 Evals and baselines</span></td><td><a href="07-evals.html"><span lang="zh-Hant">07 從真實失敗建測試集、LLM 評審、雜訊</span><span lang="en">07 Test sets from real failures, LLM judges, noise</span></a></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">1. 評測失敗訊息顯示「搜尋：找到 []，應該是 ['H04']」。你應該先改哪裡？</span><span lang="en">1. An eval failure says "search: found [], expected ['H04']". Where should you look first?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">system prompt。</span><span lang="en">The system prompt.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">搜尋：相關段落根本沒被找到，AI 再聰明也答不出來。</span><span lang="en">Search: the relevant passage was never found, so no AI could answer.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">換一個更強的模型。</span><span lang="en">A stronger model.</span></span></label>
+    <div class="explain" lang="zh-Hant">分步驟檢查的好處就是能定位問題。沒進 prompt 的段落，模型看不到。</div>
+    <div class="explain" lang="en">Step-by-step checks locate the problem. A passage that never reaches the prompt is invisible to the model.</div>
+  </fieldset>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">2. 為什麼 CI 裡用假模型，而不是每次都用真模型跑評測？</span><span lang="en">2. Why use the fake model in CI instead of the real one every time?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">因為假模型比較聰明。</span><span lang="en">The fake is smarter.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">因為真模型不能在 CI 裡執行。</span><span lang="en">Real models can't run in CI.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">假模型免費、結果固定，適合每次修改都跑；真模型要付費、結果會浮動，適合在重要的時間點跑。</span><span lang="en">The fake is free and deterministic, good for every change; the real model costs money and varies, better at key moments.</span></span></label>
+    <div class="explain" lang="zh-Hant">兩者搭配：CI 擋下程式錯誤，定期的真模型評測追蹤回答品質。</div>
+    <div class="explain" lang="en">Use both: CI catches code bugs, periodic real-model evals track answer quality.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

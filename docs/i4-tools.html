@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="i4-tools"
+  data-title-zh="I4 工具呼叫：查個人資料 · AI 工程實戰課"
+  data-title-en="I4 Tool calls: personal data · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I4 工具呼叫：查個人資料 · AI 工程實戰課</title>
+<meta name="description" content="中級篇第 4 章：讓機器人透過工具查詢員工的特休餘額。工具定義、工具迴圈、stop_reason、錯誤回傳、輪數上限，以及為什麼工具不該有 employee_id 參數。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/demos/handbook_data.js"></script>
+<script defer src="assets/demos/tooltrace.js"></script>
+<script defer src="assets/demos/intermediate.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">中級篇 · 第 4 章</span><span lang="en">Intermediate · Chapter 4</span></div>
+<h1><span lang="zh-Hant">工具呼叫：查個人資料</span><span lang="en">Tool calls: personal data</span></h1>
+<p class="lede" lang="zh-Hant">「我今年還剩幾天特休？」手冊只寫規定，寫不出你個人的餘額。這種問題要查人事系統。這一章讓 AI 可以「請你的程式幫它查」，這個機制叫工具呼叫（tool calling）。</p>
+<p class="lede" lang="en">"How many days of annual leave do I have left?" The handbook states rules, not your personal balance; that needs the HR system. This chapter lets the AI ask your code to look things up, a mechanism called tool calling.</p>
+<div class="meta"><span>⏱ 25 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>tools.py</code> · <code>bot.py</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">這章要加的功能</span><span lang="en">What this chapter adds</span></h2>
+  <ul lang="zh-Hant">
+    <li>兩個工具：查特休餘額、查今天日期。</li>
+    <li>工具迴圈：AI 要用工具 → 你的程式執行 → 結果交回 → AI 繼續回答。</li>
+    <li>三道防護：輪數上限、錯誤也回給 AI、查誰的資料由登入者決定。</li>
+  </ul>
+  <ul lang="en">
+    <li>Two tools: leave balance and today's date.</li>
+    <li>The tool loop: AI asks for a tool → your code runs it → result goes back → AI continues.</li>
+    <li>Three safeguards: a round limit, errors returned to the AI, and "whose data" decided by the login.</li>
+  </ul>
+</section>
+
+<h2 id="idea"><span lang="zh-Hant">AI 不會自己執行工具</span><span lang="en">The AI doesn't run tools itself</span></h2>
+<div class="callout tip">
+  <span class="label"><span lang="zh-Hant">一句話重點</span><span lang="en">Key point</span></span>
+  <p lang="zh-Hant"><strong>AI 只會說「我想呼叫 get_leave_balance」。真正去查資料的，永遠是你的程式。</strong>所以你完全控制它能查什麼、查誰的。</p>
+  <p lang="en"><strong>The AI only says "I'd like to call get_leave_balance". Your code is always what actually fetches the data.</strong> So you fully control what it can look up, and whose.</p>
+</div>
+
+<h2 id="define"><span lang="zh-Hant">定義工具</span><span lang="en">Defining tools</span></h2>
+<p lang="zh-Hant">工具就是一份說明：名稱、做什麼、需要哪些參數（用 JSON Schema 描述）。AI 讀這份說明來決定要不要用、怎麼用，所以 description 要寫清楚。</p>
+<p lang="en">A tool is a description: name, purpose and parameters (as JSON Schema). The AI reads it to decide whether and how to use the tool, so write the description carefully.</p>
+<figure class="code"><figcaption><span>labs/intermediate/tools.py</span></figcaption>
+<pre><code class="language-python">TOOLS = [
+    {
+        "name": "get_leave_balance",
+        "description": "查詢目前登入員工今年的特休：總天數、已休天數、剩餘天數。只能查登入者本人，不需要任何參數。",
+        "input_schema": {"type": "object", "properties": {}, "required": [], "additionalProperties": False},
+        "strict": True,
+    },
+    ...
+]
+
+
+def run_tool(name: str, args: dict, user_id: str, today=None) -&gt; tuple[str, bool]:
+    """執行工具，回傳 (結果文字, 是否為錯誤)。錯誤也要回給 AI，讓它知道發生什麼事。"""
+    if name == "get_leave_balance":
+        emp = EMPLOYEES.get(user_id)
+        if emp is None:
+            return f"找不到員工 {user_id} 的資料", True
+        remaining = emp["annual_leave_total"] - emp["annual_leave_used"]
+        return json.dumps({"total": ..., "used": ..., "remaining": remaining}), False
+    ...
+    return f"沒有這個工具：{name}", True</code></pre>
+</figure>
+<div class="callout bad">
+  <span class="label"><span lang="zh-Hant">最重要的設計決定</span><span lang="en">The most important design decision</span></span>
+  <p lang="zh-Hant"><code>get_leave_balance</code> <strong>沒有</strong> <code>employee_id</code> 參數。如果有，使用者只要說「幫我查老闆還剩幾天特休」，AI 就可能乖乖把老闆的編號填進去。查誰的資料，應該由登入系統決定（<code>user_id</code> 由你的程式傳入），而不是由 AI 決定。</p>
+  <p lang="en"><code>get_leave_balance</code> has <strong>no</strong> <code>employee_id</code> parameter. If it did, a user could say "check my boss's remaining leave" and the AI might dutifully fill in the boss's ID. Whose data is read should be decided by the login system (your code passes <code>user_id</code>), never by the AI.</p>
+</div>
+
+<h2 id="loop"><span lang="zh-Hant">工具迴圈</span><span lang="en">The tool loop</span></h2>
+<p lang="zh-Hant">每次呼叫 API，回應裡的 <code>stop_reason</code> 會告訴你它為什麼停下來。如果是 <code>tool_use</code>，代表它在等工具的結果：</p>
+<p lang="en">Each API response carries a <code>stop_reason</code> saying why it stopped. <code>tool_use</code> means it's waiting for tool results:</p>
+<figure class="code"><figcaption><span>labs/intermediate/bot.py</span></figcaption>
+<pre><code class="language-python">reply = self._call(messages, turn)
+rounds = 0
+while reply.stop_reason == "tool_use" and reply.tool_calls:
+    rounds += 1
+    if rounds &gt; config.MAX_TOOL_ROUNDS:                                  # ① 輪數上限
+        turn.error = f"工具呼叫超過 {config.MAX_TOOL_ROUNDS} 輪，已停止"
+        return self._finish(turn)
+    messages.append({"role": "assistant", "content": reply.content})     # ② 原封不動放回去
+    results = []
+    for call in reply.tool_calls:
+        content, is_error = run_tool(call.name, call.input, self.user_id) # ③ user_id 來自登入
+        results.append({"type": "tool_result", "tool_use_id": call.id,
+                        "content": content, "is_error": is_error})       # ④ 錯誤也回報
+    messages.append({"role": "user", "content": results})                # ⑤ 所有結果放同一則
+    reply = self._call(messages, turn)
+
+if reply.stop_reason in ("max_tokens", "refusal"):                       # ⑥ 其他停止原因
+    turn.error = f"沒有可用的回答（stop_reason={reply.stop_reason}）"</code></pre>
+</figure>
+<ol lang="zh-Hant">
+  <li><strong>輪數上限</strong>：模型可能一直要求用工具。沒有上限，就是一個會燒錢的無窮迴圈。</li>
+  <li><strong>原封不動放回</strong>：AI 的回應（包含 tool_use 區塊）要完整加回對話，不要只挑文字。</li>
+  <li><strong>user_id 來自登入</strong>：見上面的說明。</li>
+  <li><strong>錯誤也回報</strong>：查不到資料時，用 <code>is_error</code> 告訴 AI，讓它可以跟使用者解釋，而不是整個程式當掉。</li>
+  <li><strong>同一則訊息</strong>：如果 AI 一次要求多個工具，所有結果放在同一則 user 訊息裡回傳，每個結果的 <code>tool_use_id</code> 要對應到原本的請求。</li>
+  <li><strong>其他停止原因</strong>：<code>max_tokens</code>（被截斷）或 <code>refusal</code>（拒答）時，不要把內容當成正常答案。很多範例只判斷 <code>end_turn</code>，遇到這些情況會出錯。</li>
+</ol>
+<ol lang="en">
+  <li><strong>Round limit</strong>: the model may keep asking for tools. Without a cap, that's an infinite loop that burns money.</li>
+  <li><strong>Append unchanged</strong>: add the AI's full response (tool_use blocks included) back to the conversation; don't keep only the text.</li>
+  <li><strong>user_id from the login</strong>: see above.</li>
+  <li><strong>Report errors</strong>: when lookup fails, tell the AI via <code>is_error</code> so it can explain to the user instead of the program crashing.</li>
+  <li><strong>One message</strong>: if the AI requests several tools at once, return all results in a single user message, each <code>tool_use_id</code> matching its request.</li>
+  <li><strong>Other stop reasons</strong>: on <code>max_tokens</code> (truncated) or <code>refusal</code>, don't treat the content as a normal answer. Many examples only check <code>end_turn</code> and break in these cases.</li>
+</ol>
+
+<h2 id="demo"><span lang="zh-Hant">動手試：一步步看訊息怎麼來回</span><span lang="en">Try it: watch the messages go back and forth</span></h2>
+<div class="demo" id="traceDemo">
+  <div class="demo-head"><span class="tag">demo</span><h3><span lang="zh-Hant">「我今年還剩幾天特休？」的完整過程</span><span lang="en">The full exchange for 「我今年還剩幾天特休？」</span></h3></div>
+  <div class="demo-body">
+    <p class="hint" lang="zh-Hant">這份紀錄是實際執行 <code>labs/intermediate</code> 時攔截下來的（使用離線假模型），不是手寫的範例。注意第二次請求時，訊息從 1 則變成 3 則。</p>
+    <p class="hint" lang="en">This record was captured from an actual run of <code>labs/intermediate</code> (with the offline fake), not hand-written. Notice the second request grows from 1 message to 3.</p>
+    <div class="row">
+      <button class="btn" id="trPrev" type="button">← <span lang="zh-Hant">上一步</span><span lang="en">Back</span></button>
+      <button class="btn primary" id="trNext" type="button"><span lang="zh-Hant">下一步</span><span lang="en">Next</span> →</button>
+    </div>
+    <div id="trLabel" style="font-weight:600;margin:.4rem 0"></div>
+    <div class="row" id="trMsgs"></div>
+    <pre class="output" id="trView" style="max-height:340px;overflow:auto"></pre>
+  </div>
+</div>
+
+<h2 id="practice"><span lang="zh-Hant">練習</span><span lang="en">Exercises</span></h2>
+<ol lang="zh-Hant">
+  <li>用 <code>python -m labs.intermediate.chat --fake --user E002</code> 登入另一位員工，問同樣的問題，確認結果不同。</li>
+  <li>新增一個工具 <code>get_overtime_hours</code>（查本月加班時數），記得也不要有 employee_id 參數，並寫一個測試。</li>
+  <li>想一想：如果要新增「送出請假申請」這種<strong>會改資料</strong>的工具，還需要加什麼保護？（提示：進階篇第 06 章的人工核准。）</li>
+</ol>
+<ol lang="en">
+  <li>Run <code>python -m labs.intermediate.chat --fake --user E002</code> as another employee, ask the same question and confirm the result differs.</li>
+  <li>Add a tool <code>get_overtime_hours</code> (this month's overtime), again without an employee_id parameter, plus a test.</li>
+  <li>Think: if you added a tool that <strong>changes data</strong>, like "submit a leave request", what extra protection would it need? (Hint: human approval, core chapter 06.)</li>
+</ol>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">1. 為什麼 get_leave_balance 不接受 employee_id 參數？</span><span lang="en">1. Why doesn't get_leave_balance take an employee_id parameter?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">少一個參數比較省 token。</span><span lang="en">One fewer parameter saves tokens.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">讓 AI 無法查詢其他人的資料；查誰由登入系統決定。</span><span lang="en">So the AI can't look up other people's data; the login decides whose data.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">因為 AI 不會填參數。</span><span lang="en">Because AIs can't fill in parameters.</span></span></label>
+    <div class="explain" lang="zh-Hant">AI 會照使用者的話做事，所以權限不能交給它判斷。把權限放在程式碼裡，而不是 prompt 裡。</div>
+    <div class="explain" lang="en">The AI follows what users say, so it can't be trusted with permission decisions. Put permissions in code, not in the prompt.</div>
+  </fieldset>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">2. 工具迴圈只寫了 <code>while stop_reason != "end_turn"</code>。會有什麼問題？</span><span lang="en">2. A tool loop is written as <code>while stop_reason != "end_turn"</code>. What's the problem?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">沒有問題。</span><span lang="en">None.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">太慢。</span><span lang="en">It's too slow.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">遇到 max_tokens 或 refusal 時沒有工具要執行，卻會一直重新呼叫，形成無窮迴圈。</span><span lang="en">On max_tokens or refusal there are no tools to run, yet it keeps calling again: an infinite loop.</span></span></label>
+    <div class="explain" lang="zh-Hant">正確寫法是「stop_reason 是 tool_use 才繼續」，再加上輪數上限，並另外處理其他停止原因。</div>
+    <div class="explain" lang="en">Continue only while stop_reason is tool_use, add a round limit, and handle the other stop reasons explicitly.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

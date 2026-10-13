@@ -1,0 +1,18 @@
+{"id": "annual-notice", "question": "請特休要提前幾天申請？", "relevant": ["H01"], "must_include": ["三個工作天"], "tags": ["keyword"]}
+{"id": "annual-synonym", "question": "年假要提前多久講？", "relevant": ["H01"], "must_include": ["三個工作天"], "tags": ["synonym"]}
+{"id": "annual-carry", "question": "今年沒休完的特休可以留到明年嗎？", "relevant": ["H01"], "must_include": ["六月底"], "tags": ["keyword"]}
+{"id": "sick-cert", "question": "病假超過幾天要附醫生證明？", "relevant": ["H02"], "must_include": ["三天"], "tags": ["keyword"]}
+{"id": "personal-leave", "question": "事假一年可以請幾天？", "relevant": ["H03"], "must_include": ["十四天"], "tags": ["keyword"]}
+{"id": "core-hours", "question": "最晚幾點要到公司？", "relevant": ["H04"], "must_include": ["十點"], "tags": ["paraphrase"]}
+{"id": "wfh-synonym", "question": "一週可以在家上班幾天？", "relevant": ["H05"], "must_include": ["兩天"], "tags": ["synonym"]}
+{"id": "wfh-newbie", "question": "剛到職可以遠端工作嗎？", "relevant": ["H05"], "must_include": ["三個月"], "tags": ["keyword"]}
+{"id": "overtime-rate", "question": "加班費怎麼算？", "relevant": ["H06"], "must_include": ["1.34"], "tags": ["keyword"]}
+{"id": "expense-synonym", "question": "出差的費用要多久內報銷？", "relevant": ["H07"], "must_include": ["十四天"], "tags": ["synonym"]}
+{"id": "laptop-synonym", "question": "筆電壞了可以自己拿去修嗎？", "relevant": ["H08"], "must_include": ["IT"], "tags": ["synonym"]}
+{"id": "ai-tools", "question": "可以把公司文件貼到外面的 AI 工具嗎？", "relevant": ["H09"], "must_include": ["未經核准"], "tags": ["keyword"]}
+{"id": "training-budget", "question": "進修的補助一年多少錢？", "relevant": ["H10"], "must_include": ["兩萬"], "tags": ["synonym"]}
+{"id": "resign-notice", "question": "做了兩年要辭職，要提前多久說？", "relevant": ["H12"], "must_include": ["二十天"], "tags": ["synonym"]}
+{"id": "no-lunch", "question": "公司有提供免費午餐嗎？", "relevant": [], "expect_not_found": true, "tags": ["not-in-handbook"]}
+{"id": "no-parking", "question": "公司有員工停車位嗎？", "relevant": [], "expect_not_found": true, "tags": ["not-in-handbook"]}
+{"id": "no-pet", "question": "可以帶狗來上班嗎？", "relevant": [], "expect_not_found": true, "tags": ["not-in-handbook"]}
+{"id": "tool-balance", "question": "我今年還剩幾天特休？", "relevant": ["H01"], "must_include": ["4"], "expect_tool": "get_leave_balance", "tags": ["tool"]}

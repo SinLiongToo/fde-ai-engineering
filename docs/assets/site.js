@@ -10,6 +10,12 @@
     { slug: "b3-prompting", part: "basics", num: "B3", zh: "把話說清楚：寫 prompt", en: "Saying it clearly: prompts", min: 15 },
     { slug: "b4-your-documents", part: "basics", num: "B4", zh: "讓 AI 讀你的文件", en: "Answering from your documents", min: 15 },
     { slug: "b5-is-it-good", part: "basics", num: "B5", zh: "它做得好嗎？簡單的測試", en: "Is it any good? Simple tests", min: 15 },
+    { slug: "i1-project-setup", part: "intermediate", num: "I1", zh: "專案起步：第一版機器人", en: "Project setup: a first bot", min: 20 },
+    { slug: "i2-structured-answers", part: "intermediate", num: "I2", zh: "結構化回答與出處檢查", en: "Structured answers and citations", min: 20 },
+    { slug: "i3-better-search", part: "intermediate", num: "I3", zh: "更好的搜尋，並量出差別", en: "Better search, measured", min: 25 },
+    { slug: "i4-tools", part: "intermediate", num: "I4", zh: "工具呼叫：查個人資料", en: "Tool calls: personal data", min: 25 },
+    { slug: "i5-memory-cost", part: "intermediate", num: "I5", zh: "對話記憶與成本", en: "Conversation memory and cost", min: 20 },
+    { slug: "i6-testing", part: "intermediate", num: "I6", zh: "自動測試整個機器人", en: "Testing the whole bot", min: 20 },
     { slug: "01-fde-role", part: "core", num: "01", zh: "FDE 是做什麼的", en: "What FDEs actually do", min: 15 },
     { slug: "02-engagement", part: "core", num: "02", zh: "從需求到上線的交付流程", en: "The engagement lifecycle", min: 20 },
     { slug: "03-ai-assisted-dev", part: "core", num: "03", zh: "與 Coding Agent 協作", en: "Working with coding agents", min: 25 },
@@ -126,7 +132,7 @@
     var doneCount = CHAPTERS.filter(function (c) { return p[c.slug]; }).length;
     var html = '<ol><li><a href="index.html"' + (page === "index" ? ' aria-current="page"' : "") +
       '><span class="num">·</span><span>' + both("課程首頁", "Course home") + "</span></a></li></ol>";
-    var PARTS = [["basics", "入門篇", "Basics"], ["core", "進階篇", "Core course"]];
+    var PARTS = [["basics", "入門篇", "Basics"], ["intermediate", "中級篇", "Intermediate"], ["core", "進階篇", "Core course"]];
     PARTS.forEach(function (part) {
       html += "<h2>" + both(part[1], part[2]) + "</h2><ol>";
       CHAPTERS.forEach(function (c) {
