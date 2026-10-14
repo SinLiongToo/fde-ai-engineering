@@ -2,8 +2,9 @@
 中級 1：把「呼叫 AI」包成一個小介面
 
 機器人的其他程式只認得 `llm.create(...)` 這一個方法，回傳一個 Reply。
-所以我們可以有兩種實作：
-- ClaudeLLM：真的呼叫 Claude API（需要 ANTHROPIC_API_KEY）
+所以我們可以有三種實作：
+- ClaudeLLM：呼叫雲端的 Claude API（需要 ANTHROPIC_API_KEY）
+- OllamaLLM：呼叫在自己電腦上執行的開源模型（需要安裝 Ollama），資料不離開本機
 - FakeLLM：離線的假模型，規則固定，用來開發與測試，不花錢、結果可重現
 
 這個技巧叫「依賴注入」：需要什麼由外面傳進來，而不是寫死在程式裡。
@@ -12,11 +13,14 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from .config import MAX_TOKENS, MODEL
+from .config import MAX_TOKENS, MODEL, OLLAMA_HOST, OLLAMA_MODEL, OLLAMA_TIMEOUT_SECONDS
 from .search import expand_synonyms, pieces
 
 
@@ -66,6 +70,117 @@ class ClaudeLLM:
             input_tokens=r.usage.input_tokens,
             output_tokens=r.usage.output_tokens,
         )
+
+
+# ---------------------------------------------------------------- 本地開源模型（Ollama）
+
+class OllamaLLM:
+    """
+    呼叫本機 Ollama 的 /api/chat。Ollama 的訊息格式和 Claude 不同，這裡負責互相轉換，
+    讓 bot.py 完全不用改：
+      Claude 格式                                Ollama 格式
+      system 參數                         →      {"role": "system"} 訊息
+      assistant 的 tool_use 區塊           →      assistant 訊息的 tool_calls（沒有 id）
+      user 訊息裡的 tool_result 區塊       →      {"role": "tool", "tool_name": ...} 訊息
+      tools 的 input_schema               →      {"type": "function", "function": {"parameters": ...}}
+      output_config 的 JSON Schema        →      format 欄位
+    ⚠ 小模型對工具呼叫與 JSON 格式的遵守程度通常不如大型模型，請用 I6 的評測量出差距。
+    """
+
+    def __init__(self, model: str = OLLAMA_MODEL, host: str | None = None,
+                 timeout: float = OLLAMA_TIMEOUT_SECONDS, max_tokens: int = MAX_TOKENS):
+        self.model = model
+        self.host = (host or os.getenv("OLLAMA_HOST") or OLLAMA_HOST).rstrip("/")
+        self.timeout = timeout
+        self.max_tokens = max_tokens
+        self._calls = 0
+
+    def create(self, system, messages, tools=None, output_schema=None) -> Reply:
+        body: dict[str, Any] = {
+            "model": self.model,
+            "messages": [{"role": "system", "content": system}] + to_ollama_messages(messages),
+            "stream": False,
+            "options": {"num_predict": self.max_tokens},
+        }
+        if tools:
+            body["tools"] = [to_ollama_tool(t) for t in tools]
+        if output_schema:
+            body["format"] = output_schema
+        data = self._post("/api/chat", body)
+
+        self._calls += 1
+        msg = data.get("message", {})
+        text = msg.get("content") or ""
+        calls = []
+        for i, tc in enumerate(msg.get("tool_calls") or []):
+            fn = tc.get("function", {})
+            args = fn.get("arguments") or {}
+            if isinstance(args, str):           # 保險起見：有些版本可能回傳字串
+                args = json.loads(args or "{}")
+            calls.append(ToolCall(id=f"ollama_{self._calls}_{i}", name=fn.get("name", ""), input=args))
+
+        # 用 Claude 格式存回對話歷史，bot.py 才能一致處理
+        content: list[dict] = []
+        if text:
+            content.append({"type": "text", "text": text})
+        content += [{"type": "tool_use", "id": c.id, "name": c.name, "input": c.input} for c in calls]
+
+        if calls:
+            stop = "tool_use"
+        elif data.get("done_reason") == "length":
+            stop = "max_tokens"
+        else:
+            stop = "end_turn"
+        return Reply(content, text, calls, stop,
+                     int(data.get("prompt_eval_count") or 0), int(data.get("eval_count") or 0))
+
+    def _post(self, path: str, body: dict) -> dict:
+        req = urllib.request.Request(self.host + path, data=json.dumps(body).encode("utf-8"),
+                                     headers={"Content-Type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.URLError as e:
+            raise ConnectionError(
+                f"連不到 Ollama（{self.host}）。請確認已安裝並啟動 Ollama，"
+                f"且已執行 `ollama pull {self.model}`。原始錯誤：{e}"
+            ) from e
+
+
+def to_ollama_tool(tool: dict) -> dict:
+    return {"type": "function", "function": {
+        "name": tool["name"], "description": tool.get("description", ""), "parameters": tool["input_schema"]}}
+
+
+def to_ollama_messages(messages: list[dict]) -> list[dict]:
+    """把 Claude 格式的對話歷史轉成 Ollama 格式。"""
+    out: list[dict] = []
+    tool_names: dict[str, str] = {}      # tool_use id → 工具名稱（Ollama 的工具結果要寫名稱）
+    for m in messages:
+        content = m["content"]
+        if isinstance(content, str):
+            out.append({"role": m["role"], "content": content})
+            continue
+        blocks = [b if isinstance(b, dict) else b.model_dump() for b in content]
+        if m["role"] == "assistant":
+            text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
+            calls = []
+            for b in blocks:
+                if b.get("type") == "tool_use":
+                    tool_names[b["id"]] = b["name"]
+                    calls.append({"function": {"name": b["name"], "arguments": b.get("input") or {}}})
+            msg: dict[str, Any] = {"role": "assistant", "content": text}
+            if calls:
+                msg["tool_calls"] = calls
+            out.append(msg)
+        else:
+            for b in blocks:
+                if b.get("type") == "tool_result":
+                    out.append({"role": "tool", "content": str(b.get("content", "")),
+                                "tool_name": tool_names.get(b.get("tool_use_id"), "")})
+                elif b.get("type") == "text":
+                    out.append({"role": "user", "content": b.get("text", "")})
+    return out
 
 
 # ---------------------------------------------------------------- 離線假模型

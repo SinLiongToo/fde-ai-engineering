@@ -38,7 +38,7 @@ python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-python -m pytest                   # 90 passed</code></pre>
+python -m pytest                   # 95 passed</code></pre>
 </figure>
 
 <h2 id="lab-basics"><span lang="zh-Hant">入門篇練習</span><span lang="en">Basics exercises</span></h2>
@@ -72,6 +72,7 @@ python -m pytest                   # 90 passed</code></pre>
 <p lang="en">Covers intermediate chapters I1–I6. A complete small application with tests for every feature; without an API key it uses the offline fake model.</p>
 <figure class="code"><figcaption><span>terminal</span></figcaption>
 <pre><code class="language-bash">python -m labs.intermediate.chat --fake          # 聊天（I1–I5）
+python -m labs.intermediate.chat --ollama        # 改用本機開源模型（需安裝 Ollama，見第 08 章）
 python -m labs.intermediate.evals --search       # 比較三個搜尋版本（I3）
 python -m labs.intermediate.evals                # 評測整個機器人（I6）
 python -m pytest labs/intermediate               # 單元測試</code></pre>

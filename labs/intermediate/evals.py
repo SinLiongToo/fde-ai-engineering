@@ -4,6 +4,7 @@
     python -m labs.intermediate.evals --search          # 比較三個搜尋版本（第 3 章）
     python -m labs.intermediate.evals                   # 用離線假模型跑完整機器人
     python -m labs.intermediate.evals --real            # 用真的 Claude 跑（需要 API key，會花錢）
+    python -m labs.intermediate.evals --ollama          # 用本機 Ollama 的開源模型跑（免費，但較慢）
     python -m labs.intermediate.evals --update-baseline # 確認結果後，把分數存成基準
 
 每一題檢查四件事：
@@ -22,7 +23,8 @@ import sys
 from pathlib import Path
 
 from .bot import HandbookBot
-from .llm import ClaudeLLM, FakeLLM
+from .config import OLLAMA_MODEL
+from .llm import ClaudeLLM, FakeLLM, OllamaLLM
 from .search import Searcher
 
 HERE = Path(__file__).parent
@@ -92,6 +94,7 @@ def run_bot(llm) -> dict:
     summary = {"cases": len(cases), "passed": passed, "pass_rate": round(passed / len(cases), 4)}
     print(json.dumps(summary, ensure_ascii=False))
     print(f"用量：輸入 {usage_in}、輸出 {usage_out}" + ("（假模型：以字數估算）" if isinstance(llm, FakeLLM) else " token"))
+    print(f"模型：{getattr(llm, 'model', 'fake')}")
     return summary
 
 
@@ -99,6 +102,8 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--search", action="store_true", help="只比較搜尋版本")
     ap.add_argument("--real", action="store_true", help="使用真的 Claude（需要 ANTHROPIC_API_KEY）")
+    ap.add_argument("--ollama", action="store_true", help="使用本機 Ollama 的開源模型")
+    ap.add_argument("--model", default=OLLAMA_MODEL, help="Ollama 模型名稱")
     ap.add_argument("--update-baseline", action="store_true")
     args = ap.parse_args(argv)
 
@@ -110,8 +115,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.real and not os.getenv("ANTHROPIC_API_KEY"):
         print("需要設定 ANTHROPIC_API_KEY")
         return 2
-    summary = run_bot(ClaudeLLM() if args.real else FakeLLM())
-    if args.real:
+    if args.ollama:
+        llm = OllamaLLM(model=args.model)
+    else:
+        llm = ClaudeLLM() if args.real else FakeLLM()
+    try:
+        summary = run_bot(llm)
+    except ConnectionError as e:
+        print(e)
+        return 2
+    if args.real or args.ollama:
         return 0  # 真模型的分數會浮動，這裡只顯示，不和假模型的基準比較
 
     if args.update_baseline:

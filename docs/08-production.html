@@ -37,12 +37,14 @@
     <li>定義每個請求要記錄的追蹤欄位，讓任何一次錯誤回答都能重現原因。</li>
     <li>用架構而不是 prompt 來降低提示注入的風險。</li>
     <li>找出成本與延遲的主要來源，並按優先順序處理。</li>
+    <li>依資料限制、能力需求、用量與維運能力，決定用雲端 API 還是自己架設模型。</li>
     <li>規劃逾時、重試、降級、分階段發布與交接。</li>
   </ul>
   <ul lang="en">
     <li>Define the trace fields to record per request so any bad answer can be explained.</li>
     <li>Reduce prompt-injection risk through architecture rather than prompts.</li>
     <li>Find the main drivers of cost and latency and address them in order.</li>
+    <li>Decide between a cloud API and a self-hosted model based on data constraints, capability, volume and ops capacity.</li>
     <li>Plan timeouts, retries, degraded modes, staged rollout and handover.</li>
   </ul>
 </section>
@@ -155,6 +157,148 @@
   <li><strong>Batch APIs for offline work</strong>: bulk processing that needn't be immediate is usually priced lower.</li>
   <li><strong>Choose models per task</strong>: a simple classification step may be fine on a smaller model. This trades quality, so <strong>confirm it with evals</strong>; don't downgrade on a hunch.</li>
 </ol>
+
+<h2 id="model-choice"><span lang="zh-Hant">選模型：雲端 API 還是自己架</span><span lang="en">Choosing a model: cloud API or self-hosted</span></h2>
+<p lang="zh-Hant">到目前為止，課程都假設你呼叫雲端的模型 API。但在客戶現場，常常會遇到另一個問題：「我們的資料不能離開公司，可以用自己架的模型嗎？」這一節整理這個決定要考慮的事。</p>
+<p lang="en">So far the course has assumed a cloud model API. At customer sites you'll often hear: "our data can't leave the company; can we run our own model?" This section covers what that decision involves.</p>
+
+<h3><span lang="zh-Hant">兩個不同的維度</span><span lang="en">Two different dimensions</span></h3>
+<p lang="zh-Hant">常聽到「前沿模型 vs 開源模型」，但它們其實在描述不同的事：</p>
+<p lang="en">People often say "frontier vs open-source models", but those terms describe different things:</p>
+<ul lang="zh-Hant">
+  <li><strong>前沿（frontier）</strong>描述的是<strong>能力</strong>：目前能力最頂尖、用最大規模算力訓練的模型。</li>
+  <li><strong>開源權重（open-weight）</strong>描述的是<strong>開放程度</strong>：模型權重公開，可以下載到自己的機器上執行、微調。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Frontier</strong> describes <strong>capability</strong>: the most capable models, trained with the most compute.</li>
+  <li><strong>Open-weight</strong> describes <strong>openness</strong>: the weights are published, so you can download, run and fine-tune them yourself.</li>
+</ul>
+<p lang="zh-Hant">目前能力最頂尖的模型多半只透過 API 提供，但也有接近頂尖水準的開源權重模型。所以真正要做的決定不是「前沿還是開源」，而是<strong>「透過雲端 API 使用」還是「自己架設執行」</strong>。</p>
+<p lang="en">Today the most capable models are mostly API-only, but some open-weight models come close. So the real decision isn't "frontier or open" but <strong>"use a cloud API" or "host it yourself"</strong>.</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th></th><th><span lang="zh-Hant">雲端 API</span><span lang="en">Cloud API</span></th><th><span lang="zh-Hant">自己架設（開源權重）</span><span lang="en">Self-hosted (open weights)</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">資料去向</span><span lang="en">Where data goes</span></td>
+      <td><span lang="zh-Hant">送到供應商的伺服器，依合約條款保護</span><span lang="en">To the vendor's servers, protected by contract terms</span></td>
+      <td><span lang="zh-Hant">留在自己的機器或內網，可以完全隔離</span><span lang="en">Stays on your machines or network; can be fully isolated</span></td></tr>
+    <tr><td><span lang="zh-Hant">能力</span><span lang="en">Capability</span></td>
+      <td><span lang="zh-Hant">可以用到目前最強的模型</span><span lang="en">Access to the strongest current models</span></td>
+      <td><span lang="zh-Hant">受限於你的硬體能跑多大的模型</span><span lang="en">Limited by how large a model your hardware can run</span></td></tr>
+    <tr><td><span lang="zh-Hant">成本結構</span><span lang="en">Cost structure</span></td>
+      <td><span lang="zh-Hant">依 token 計費，不用買硬體；用量大時累積很快</span><span lang="en">Pay per token, no hardware; adds up quickly at volume</span></td>
+      <td><span lang="zh-Hant">硬體、電費、維運人力；用量越大，單位成本可能越低</span><span lang="en">Hardware, power, ops staff; unit cost may fall as volume grows</span></td></tr>
+    <tr><td><span lang="zh-Hant">維運負擔</span><span lang="en">Ops burden</span></td>
+      <td><span lang="zh-Hant">供應商負責</span><span lang="en">The vendor's</span></td>
+      <td><span lang="zh-Hant">你負責：部署、監控、升級、擴充、故障處理</span><span lang="en">Yours: deployment, monitoring, upgrades, scaling, incidents</span></td></tr>
+    <tr><td><span lang="zh-Hant">客製化</span><span lang="en">Customisation</span></td>
+      <td><span lang="zh-Hant">prompt、檢索、供應商提供的有限調整</span><span lang="en">Prompts, retrieval, whatever tuning the vendor offers</span></td>
+      <td><span lang="zh-Hant">可以微調權重、改推論設定</span><span lang="en">Fine-tune weights, change inference settings</span></td></tr>
+    <tr><td><span lang="zh-Hant">版本控制</span><span lang="en">Version control</span></td>
+      <td><span lang="zh-Hant">指定明確的模型 ID；舊版本會被淘汰，需要規劃升級</span><span lang="en">Pin explicit model IDs; old versions retire, so plan upgrades</span></td>
+      <td><span lang="zh-Hant">自己決定何時升級；權重、量化、推論引擎都要一起管版本</span><span lang="en">You decide when to upgrade; version weights, quantisation and engine together</span></td></tr>
+  </tbody>
+</table>
+</div>
+<p lang="zh-Hant">具體的模型名稱與能力排名變化很快，這裡刻意不列。需要時，請查各供應商與模型社群的最新資訊，並記下查詢日期。</p>
+<p lang="en">Specific model names and rankings change quickly, so they're deliberately omitted. When you need them, check the vendors' and model communities' latest information and note the date.</p>
+
+<h3><span lang="zh-Hant">怎麼決定：先問需求，不是先挑模型</span><span lang="en">Deciding: ask about requirements, not models</span></h3>
+<p lang="zh-Hant">這些問題在<a href="02-engagement.html#discovery">第 02 章的需求訪談</a>就要問：</p>
+<p lang="en">Ask these during <a href="02-engagement.html#discovery">discovery (chapter 02)</a>:</p>
+<ol lang="zh-Hant">
+  <li><strong>資料能不能送到外部服務？</strong>先確認法規、合約與公司政策。如果可以，再看雲端供應商的資料保留與區域條款能不能接受（見上面的「個資與資料治理」）。半導體製程、金融、醫療、國防等領域，答案常常是「不行」。</li>
+  <li><strong>需要多強的能力？</strong>用你的測試集（<a href="07-evals.html">第 07 章</a>）實際比較，而不是看公開排行榜。小模型在你的任務上夠不夠用，只有你的資料能回答。</li>
+  <li><strong>用量多大？</strong>每天幾十次和每天幾十萬次，成本結論完全不同。</li>
+  <li><strong>誰來維運？</strong>自己架設等於多了一套要顧的系統。客戶有沒有人能處理 GPU 伺服器的部署、監控與升級？</li>
+</ol>
+<ol lang="en">
+  <li><strong>May data go to an external service?</strong> Check regulation, contracts and company policy first. If yes, see whether the vendor's retention and region terms are acceptable (see "Personal data and governance" above). In semiconductor manufacturing, finance, healthcare or defence the answer is often no.</li>
+  <li><strong>How much capability is needed?</strong> Compare on your test set (<a href="07-evals.html">chapter 07</a>), not public leaderboards. Only your data can say whether a small model is good enough for your task.</li>
+  <li><strong>What volume?</strong> Dozens of calls a day and hundreds of thousands lead to completely different cost conclusions.</li>
+  <li><strong>Who operates it?</strong> Self-hosting adds a system to run. Does the customer have people for GPU server deployment, monitoring and upgrades?</li>
+</ol>
+
+<h3><span lang="zh-Hant">混合架構</span><span lang="en">Hybrid architectures</span></h3>
+<p lang="zh-Hant">實務上常常不是二選一。例如：機密資料的摘要與分類用內網的開源模型；不含機密的高難度推理交給雲端 API。這和上面「依任務選模型」是同一個原則：<strong>每一種分工都要用評測確認品質，不要憑感覺</strong>。中級篇的機器人就是這樣設計的：<a href="i1-project-setup.html#interface">I1 的 LLM 介面</a>可以切換雲端 Claude、本機 Ollama 與離線假模型，再用 <a href="i6-testing.html">I6 的評測</a>比較。</p>
+<p lang="en">In practice it's often not either/or. For example: summarise and classify confidential data with an in-house open model, and send non-confidential hard reasoning to a cloud API. It's the same principle as "choose models per task" above: <strong>validate every split with evals, not intuition</strong>. The intermediate bot is built this way: <a href="i1-project-setup.html#interface">I1's LLM interface</a> switches between cloud Claude, local Ollama and the offline fake, and <a href="i6-testing.html">I6's evals</a> compare them.</p>
+
+<h3><span lang="zh-Hant">硬體：記憶體決定放不放得下，頻寬決定跑多快</span><span lang="en">Hardware: memory decides whether it fits, bandwidth decides how fast</span></h3>
+<ul lang="zh-Hant">
+  <li><strong>記憶體容量</strong>：模型權重要整個放進記憶體（GPU 顯存，或 Apple 晶片的統一記憶體）。粗估：每 10 億（1B）參數，16 位元精度約需 2 GB；量化成 4 位元約需 0.5 到 0.6 GB。例如 8B 模型約 16 GB，4 位元量化後約 5 GB。</li>
+  <li><strong>對話越長，需要越多記憶體</strong>：模型要記住前面的內容（KV cache），上下文越長佔用越多。只算權重的大小，常常會低估。</li>
+  <li><strong>記憶體頻寬決定速度</strong>：每產生一個 token，都要把權重讀過一遍。所以頻寬高的 GPU 遠快於一般 CPU。</li>
+  <li><strong>量化有代價</strong>：位元數越低，越省記憶體，但品質可能下降。量化前後要用測試集比較。</li>
+</ul>
+<ul lang="en">
+  <li><strong>Memory capacity</strong>: the weights must fit entirely in memory (GPU VRAM, or Apple silicon's unified memory). Rough guide: per billion parameters, about 2 GB at 16-bit precision and 0.5–0.6 GB at 4-bit. An 8B model needs about 16 GB, or about 5 GB quantised to 4-bit.</li>
+  <li><strong>Longer conversations need more memory</strong>: the model keeps earlier context in a KV cache that grows with context length. Counting weights alone usually underestimates.</li>
+  <li><strong>Memory bandwidth sets speed</strong>: every generated token reads through the weights, which is why high-bandwidth GPUs far outpace ordinary CPUs.</li>
+  <li><strong>Quantisation has a cost</strong>: fewer bits save memory but can lower quality. Compare before and after on your test set.</li>
+</ul>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">硬體</span><span lang="en">Hardware</span></th><th><span lang="zh-Hant">大約能跑</span><span lang="en">Roughly runs</span></th><th><span lang="zh-Hant">適合</span><span lang="en">Good for</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">一般筆電（只有 CPU，8–32 GB 記憶體）</span><span lang="en">Ordinary laptop (CPU only, 8–32 GB RAM)</span></td>
+      <td><span lang="zh-Hant">1B–8B，4 位元量化</span><span lang="en">1B–8B, 4-bit quantised</span></td>
+      <td><span lang="zh-Hant">學習、概念驗證；速度較慢</span><span lang="en">Learning, proofs of concept; slow</span></td></tr>
+    <tr><td><span lang="zh-Hant">Apple 晶片 Mac（大容量統一記憶體）</span><span lang="en">Apple silicon Mac (large unified memory)</span></td>
+      <td><span lang="zh-Hant">依記憶體大小，可到數十 B</span><span lang="en">Up to tens of billions, depending on memory</span></td>
+      <td><span lang="zh-Hant">個人開發、小型專案</span><span lang="en">Personal development, small projects</span></td></tr>
+    <tr><td><span lang="zh-Hant">消費級顯卡（12–24 GB 顯存）</span><span lang="en">Consumer GPU (12–24 GB VRAM)</span></td>
+      <td><span lang="zh-Hant">7B–14B 較順；更大的模型需要多張卡或更強的量化</span><span lang="en">7B–14B comfortably; larger needs multiple cards or heavier quantisation</span></td>
+      <td><span lang="zh-Hant">工程師開發機、少數人使用的內部工具</span><span lang="en">Developer machines, internal tools for a few users</span></td></tr>
+    <tr><td><span lang="zh-Hant">資料中心 GPU 伺服器</span><span lang="en">Data-centre GPU servers</span></td>
+      <td><span lang="zh-Hant">大型模型、高併發</span><span lang="en">Large models, high concurrency</span></td>
+      <td><span lang="zh-Hant">正式的企業部署，搭配 vLLM 等推論伺服器</span><span lang="en">Production enterprise deployment with an inference server such as vLLM</span></td></tr>
+    <tr><td><span lang="zh-Hant">雲端租用 GPU（按小時計費，例如 Colab）</span><span lang="en">Rented cloud GPUs (hourly, e.g. Colab)</span></td>
+      <td><span lang="zh-Hant">依租用的規格</span><span lang="en">Depends on what you rent</span></td>
+      <td><span lang="zh-Hant">測試與比較，不用先買硬體</span><span lang="en">Testing and comparison without buying hardware</span></td></tr>
+  </tbody>
+</table>
+</div>
+<p lang="zh-Hant">表格只是大致的方向。實際速度會隨模型、量化方式、上下文長度與推論工具差很多，請在自己的機器上量。</p>
+<p lang="en">The table is only a rough guide. Real speed varies widely with model, quantisation, context length and inference software, so measure on your own machine.</p>
+
+<h3><span lang="zh-Hant">常見的誤解</span><span lang="en">Common misconceptions</span></h3>
+<div class="callout bad">
+  <span class="label"><span lang="zh-Hant">「開源模型權重固定，所以輸出永遠一致」</span><span lang="en">"Open weights are fixed, so outputs never change"</span></span>
+  <p lang="zh-Hant">權重固定不等於輸出固定。隨機抽樣、批次處理方式、量化版本、推論引擎的更新，都可能讓結果改變。自己架設一樣要固定所有版本，並在每次更新後跑評測。</p>
+  <p lang="en">Fixed weights don't mean fixed outputs. Sampling, batching, quantisation versions and inference-engine updates can all change results. Self-hosting still means pinning every version and running evals after each update.</p>
+</div>
+<div class="callout bad">
+  <span class="label"><span lang="zh-Hant">「自己架就免費」</span><span lang="en">"Self-hosting is free"</span></span>
+  <p lang="zh-Hant">沒有 API 帳單，但有硬體、電費、機房，以及最貴的：維運人力。成本比較要算總持有成本，而且要用實際的用量估算。</p>
+  <p lang="en">There's no API bill, but there's hardware, power, space and, most expensive of all, operations staff. Compare total cost of ownership using real expected volume.</p>
+</div>
+<div class="callout bad">
+  <span class="label"><span lang="zh-Hant">「排行榜上分數差不多，所以夠用」</span><span lang="en">"Similar leaderboard scores mean it's good enough"</span></span>
+  <p lang="zh-Hant">公開排行榜測的是通用能力，不是你的任務。小模型常常在工具呼叫、遵守 JSON 格式、中文專業用語上差距較大。用你的測試集量。</p>
+  <p lang="en">Public leaderboards test general ability, not your task. Small models often lag on tool use, following JSON formats and domain terminology in Chinese. Measure on your test set.</p>
+</div>
+<div class="callout bad">
+  <span class="label"><span lang="zh-Hant">「雲端供應商會偷偷改模型，所以不能用」</span><span lang="en">"Cloud vendors change models silently, so they're unusable"</span></span>
+  <p lang="zh-Hant">指定明確的模型 ID（不要用會自動更新的別名），並在 CI 跑評測，就能控制大部分的風險。真正要規劃的是舊版本淘汰時的升級流程（見下面的「分階段發布」）。</p>
+  <p lang="en">Pinning explicit model IDs (not auto-updating aliases) and running evals in CI controls most of the risk. What really needs planning is the upgrade path when old versions retire (see "Staged rollout" below).</p>
+</div>
+
+<h3><span lang="zh-Hant">動手試：用本機開源模型跑中級篇的機器人</span><span lang="en">Try it: run the intermediate bot on a local open model</span></h3>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash"># 1. 安裝 Ollama（https://ollama.com），然後下載模型
+ollama pull qwen2.5:3b          # 約 2 GB，一般筆電可以跑
+
+# 2. 用本機模型聊天、跑評測（資料不離開你的電腦）
+python -m labs.intermediate.chat --ollama
+python -m labs.intermediate.evals --ollama
+
+# 3. 和其他模型比較
+python -m labs.intermediate.evals --ollama --model qwen2.5:7b   # 需要更多記憶體
+python -m labs.intermediate.evals --real                        # 雲端 Claude（需要 API key）</code></pre>
+</figure>
+<p lang="zh-Hant">把三個結果的通過率與失敗類型並排比較，就是一份很實用的選型報告。電腦跑不動的話，可以在 Google Colab 的 GPU 執行個體上安裝 Ollama 來跑同樣的評測。</p>
+<p lang="en">Put the pass rates and failure types side by side and you have a genuinely useful model-selection report. If your computer can't cope, install Ollama on a Google Colab GPU instance and run the same evals there.</p>
 
 <h2 id="reliability"><span lang="zh-Hant">可靠性</span><span lang="en">Reliability</span></h2>
 <ul lang="zh-Hant">

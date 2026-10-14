@@ -69,9 +69,14 @@ To publish on GitHub Pages: Settings → Pages → deploy from the `/docs` folde
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest                     # 90 tests
+python -m pytest                     # 95 tests
 python -m labs.core.evals            # eval gate against labs/core/baseline.json
 python -m labs.mcp_sre.cli --stdio   # MCP server over a real stdio subprocess
+
+# 選用：用本機開源模型（Ollama）跑中級篇的機器人，資料不離開電腦
+# Optional: run the intermediate bot on a local open model via Ollama
+ollama pull qwen2.5:3b
+python -m labs.intermediate.chat --ollama
 ```
 
 ## 專案結構 / Layout

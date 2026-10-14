@@ -71,7 +71,7 @@
   <tbody>
     <tr><td><code>handbook.md</code></td><td><span lang="zh-Hant">員工手冊（12 段）</span><span lang="en">The employee handbook (12 sections)</span></td><td>I1</td></tr>
     <tr><td><code>config.py</code></td><td><span lang="zh-Hant">模型名稱、價格、各種上限，集中在一個地方</span><span lang="en">Model name, prices and limits, all in one place</span></td><td>I1</td></tr>
-    <tr><td><code>llm.py</code></td><td><span lang="zh-Hant">呼叫 AI 的介面：<code>ClaudeLLM</code> 與 <code>FakeLLM</code></span><span lang="en">The AI interface: <code>ClaudeLLM</code> and <code>FakeLLM</code></span></td><td>I1</td></tr>
+    <tr><td><code>llm.py</code></td><td><span lang="zh-Hant">呼叫 AI 的介面：<code>ClaudeLLM</code>、<code>OllamaLLM</code> 與 <code>FakeLLM</code></span><span lang="en">The AI interface: <code>ClaudeLLM</code>, <code>OllamaLLM</code> and <code>FakeLLM</code></span></td><td>I1</td></tr>
     <tr><td><code>bot.py</code></td><td><span lang="zh-Hant">把所有零件串起來</span><span lang="en">Wires everything together</span></td><td>I1–I5</td></tr>
     <tr><td><code>schema.py</code></td><td><span lang="zh-Hant">回答的格式與檢查規則</span><span lang="en">Answer format and validation rules</span></td><td>I2</td></tr>
     <tr><td><code>search.py</code></td><td><span lang="zh-Hant">搜尋手冊（三個版本）</span><span lang="en">Handbook search (three versions)</span></td><td>I3</td></tr>
@@ -142,6 +142,16 @@ class ClaudeLLM:
             output_tokens=r.usage.output_tokens,
         )</code></pre>
 </figure>
+
+<h3><span lang="zh-Hant">第三種實作：本機開源模型</span><span lang="en">A third implementation: a local open model</span></h3>
+<p lang="zh-Hant"><code>llm.py</code> 裡還有 <code>OllamaLLM</code>：呼叫在你電腦上執行的開源模型（透過 Ollama），資料完全不離開本機。Ollama 的訊息格式和 Claude 不同（例如工具呼叫沒有 id、工具結果用 <code>role: "tool"</code>），這些轉換都包在 <code>OllamaLLM</code> 裡，<code>bot.py</code> 一行都不用改。這正是把 AI 包成介面的好處。</p>
+<p lang="en"><code>llm.py</code> also contains <code>OllamaLLM</code>, which calls an open model running on your own computer via Ollama, so data never leaves the machine. Ollama's message format differs from Claude's (tool calls have no id, tool results use <code>role: "tool"</code>), and all of that conversion lives inside <code>OllamaLLM</code>; <code>bot.py</code> doesn't change at all. That's the payoff of the interface.</p>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash">ollama pull qwen2.5:3b                          # 先安裝 Ollama（https://ollama.com）
+python -m labs.intermediate.chat --ollama</code></pre>
+</figure>
+<p lang="zh-Hant">什麼時候該用雲端、什麼時候該自己架，見進階篇<a href="08-production.html#model-choice">第 08 章</a>。</p>
+<p lang="en">For when to use a cloud API versus self-hosting, see core <a href="08-production.html#model-choice">chapter 08</a>.</p>
 
 <h3><span lang="zh-Hant">為什麼需要假模型</span><span lang="en">Why a fake model?</span></h3>
 <p lang="zh-Hant"><code>FakeLLM</code> 不是 AI，它是一組固定的規則：從提供的手冊段落中挑最相近的一段引用、問到特休餘額就呼叫工具。它的用途是：</p>

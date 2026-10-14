@@ -127,7 +127,8 @@ def test_tool_rounds_are_capped():
 <pre><code class="language-bash">python -m pytest labs/intermediate                    # 單元測試
 python -m labs.intermediate.evals                     # 評測（假模型），比較基準
 python -m labs.intermediate.evals --update-baseline   # 人確認過後才更新基準
-python -m labs.intermediate.evals --real              # 真模型（要 API key、會花錢、分數會浮動）</code></pre>
+python -m labs.intermediate.evals --real              # 真模型（要 API key、會花錢、分數會浮動）
+python -m labs.intermediate.evals --ollama            # 本機開源模型（免費但較慢，見第 08 章）</code></pre>
 </figure>
 
 <h2 id="fake-vs-real"><span lang="zh-Hant">假模型與真模型的分工</span><span lang="en">Fake vs. real model</span></h2>
