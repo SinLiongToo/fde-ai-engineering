@@ -31,6 +31,7 @@ production in customer environments. Every chapter maps to offline, tested Pytho
 | I4 | 工具呼叫：查個人資料 | Tool calls: personal data | `labs/intermediate/tools.py` |
 | I5 | 對話記憶與成本 | Conversation memory and cost | `labs/intermediate/bot.py` |
 | I6 | 自動測試整個機器人 | Testing the whole bot | `labs/intermediate/evals.py` |
+| I7 | 部署上線：做成網站 | Deploying as a website | `labs/intermediate/web.py`, `Dockerfile` |
 
 **進階篇 / Core course** — 給有經驗的工程師 / for experienced engineers
 
@@ -69,7 +70,7 @@ To publish on GitHub Pages: Settings → Pages → deploy from the `/docs` folde
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest                     # 95 tests
+python -m pytest                     # 105 tests
 python -m labs.core.evals            # eval gate against labs/core/baseline.json
 python -m labs.mcp_sre.cli --stdio   # MCP server over a real stdio subprocess
 
@@ -77,6 +78,9 @@ python -m labs.mcp_sre.cli --stdio   # MCP server over a real stdio subprocess
 # Optional: run the intermediate bot on a local open model via Ollama
 ollama pull qwen2.5:3b
 python -m labs.intermediate.chat --ollama
+
+# 網頁版機器人（I7）/ the bot as a website
+uvicorn labs.intermediate.web:app --reload
 ```
 
 ## 專案結構 / Layout
@@ -89,6 +93,8 @@ docs/                    網站 / website (static HTML, no build step)
   01-…09-*.html          進階篇九章
   glossary.html          詞彙表
   projects.html          作品集專案：六個分級題目、README 範本、檢查表
+  certifications.html    認證與學習路線（依官方資訊整理，附查詢日期）
+Dockerfile               網頁版機器人的容器設定（I7），搭配 requirements-web.txt
   assets/site.css        設計系統：顏色變數、深淺色、版面
   assets/site.js         側欄、目錄、語言/主題切換、小測驗、進度
   assets/demos/*.js      互動示範（basics.js 為入門篇）

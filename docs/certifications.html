@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="certifications"
+  data-title-zh="認證與學習路線 · AI 工程實戰課"
+  data-title-en="Certifications and learning path · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>認證與學習路線 · AI 工程實戰課</title>
+<meta name="description" content="AWS、Google Cloud、Microsoft、Databricks、Anthropic 的 AI 相關證照比較（依官方頁面整理，附查詢日期），什麼時候值得考，以及一份 12 週學習計畫。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="assets/site.js"></script>
+<style>
+  .src { font-size: .8rem; color: var(--fg-faint); }
+  .plan td:first-child { white-space: nowrap; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">學完之後</span><span lang="en">After the course</span></div>
+<h1><span lang="zh-Hant">認證與學習路線</span><span lang="en">Certifications and learning path</span></h1>
+<p class="lede" lang="zh-Hant">這一頁回答兩個問題：證照值不值得考、該考哪一張；以及從這門課出發，怎麼安排一份 12 週的學習計畫。</p>
+<p class="lede" lang="en">This page answers two questions: are certifications worth it, and which one; and how to plan 12 weeks of study starting from this course.</p>
+
+<div class="callout warn">
+  <span class="label"><span lang="zh-Hant">資料日期</span><span lang="en">Information date</span></span>
+  <p lang="zh-Hant">以下證照資訊依各家<strong>官方頁面</strong>整理，查詢日期為 <strong>2026-10-14</strong>。證照的名稱、考試版本、費用與資格變動很快（例如 2026 年 AWS、Microsoft 都改版或淘汰了好幾張 AI 證照），<strong>報名前請一定再到官方頁面確認</strong>。官方頁面沒有寫的欄位，這裡標示「官方未列」，不用第三方網站的數字補。</p>
+  <p lang="en">The certification details below come from each vendor's <strong>official pages</strong>, checked on <strong>2026-10-14</strong>. Names, exam versions, fees and eligibility change quickly (AWS and Microsoft both revised or retired several AI certifications in 2026), so <strong>always re-check the official page before registering</strong>. Fields the official pages don't state are marked "not listed" rather than filled from third-party sites.</p>
+</div>
+
+<h2 id="worth"><span lang="zh-Hant">先講立場：證照什麼時候值得考</span><span lang="en">First, a position: when certifications are worth it</span></h2>
+<p lang="zh-Hant">對 FDE、AI 應用工程師這類職位，證照的分量通常不如作品（見<a href="projects.html">作品集專案</a>）。它證明你「知道」某些東西，但不證明你「做得出來」。不過，在下面幾種情況，證照有實際用處：</p>
+<p lang="en">For FDE and AI application engineering roles, certifications usually carry less weight than projects (see <a href="projects.html">portfolio projects</a>). They show you <em>know</em> something, not that you can <em>build</em> it. They do help in a few situations:</p>
+<div class="grid">
+  <div class="card"><h3><span lang="zh-Hant">客戶綁定某家雲端</span><span lang="en">Customers on one cloud</span></h3>
+    <p lang="zh-Hant">你的目標產業（例如半導體、製造業）的客戶主要用 AWS、Azure 或 Google Cloud，證照能證明你懂他們的基礎架構。</p>
+    <p lang="en">If your target industry's customers mostly use AWS, Azure or Google Cloud, a certification shows you understand their infrastructure.</p></div>
+  <div class="card"><h3><span lang="zh-Hant">履歷還沒有 AI 經歷</span><span lang="en">No AI experience on your CV yet</span></h3>
+    <p lang="zh-Hant">轉職時，證照可以當成「有系統學過」的門檻證明，讓履歷通過第一關篩選。</p>
+    <p lang="en">When changing careers, a certification proves structured study and can get a CV past first-round screening.</p></div>
+  <div class="card"><h3><span lang="zh-Hant">公司或合作夥伴要求</span><span lang="en">Employer or partner requirements</span></h3>
+    <p lang="zh-Hant">有些顧問公司的合作夥伴資格，要求一定人數的認證人員（例如 Claude Partner Network）。</p>
+    <p lang="en">Some consulting partner programs require a number of certified staff (the Claude Partner Network, for example).</p></div>
+  <div class="card"><h3><span lang="zh-Hant">用考試大綱當學習地圖</span><span lang="en">Using the syllabus as a map</span></h3>
+    <p lang="zh-Hant">就算不考，考試大綱也是很好的「該學什麼」清單。</p>
+    <p lang="en">Even if you never sit the exam, the syllabus is a good "what to learn" checklist.</p></div>
+</div>
+<p lang="zh-Hant"><strong>不建議</strong>為了收集證照而犧牲做專案的時間。一張證照加一個有評測數字的作品，比三張證照有說服力。</p>
+<p lang="en"><strong>Don't</strong> trade project time for collecting certificates. One certification plus one project with eval numbers beats three certifications.</p>
+
+<h2 id="compare"><span lang="zh-Hant">主要的 AI 相關證照</span><span lang="en">Main AI-related certifications</span></h2>
+
+<h3>AWS</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">證照</span><span lang="en">Certification</span></th><th><span lang="zh-Hant">適合</span><span lang="en">For</span></th><th><span lang="zh-Hant">考試</span><span lang="en">Exam</span></th><th><span lang="zh-Hant">費用</span><span lang="en">Fee</span></th></tr></thead>
+  <tbody>
+    <tr><td><a href="https://aws.amazon.com/certification/certified-ai-practitioner/" rel="noopener">AWS Certified AI Practitioner</a></td>
+      <td><span lang="zh-Hant">入門：驗證 AI/ML 與生成式 AI 的基礎知識</span><span lang="en">Foundational AI/ML and generative AI knowledge</span></td>
+      <td><span lang="zh-Hant">90 分鐘、65 題</span><span lang="en">90 min, 65 questions</span></td><td>USD 100</td></tr>
+    <tr><td><a href="https://aws.amazon.com/certification/certified-machine-learning-engineer-associate/" rel="noopener">AWS Certified Machine Learning Engineer – Associate</a></td>
+      <td><span lang="zh-Hant">ML 模型的開發與上線</span><span lang="en">Building and operating ML in production</span></td>
+      <td><span lang="zh-Hant">改版中：英文版 MLA-C01 已於 2026-09-28 停考；新版 MLA-C02 於 2026-09-29 開始 beta（170 分鐘、85 題），預計 2027-01-14 正式推出</span><span lang="en">Being revised: English MLA-C01 ended 2026-09-28; MLA-C02 beta from 2026-09-29 (170 min, 85 questions), GA expected 2027-01-14</span></td>
+      <td><span lang="zh-Hant">beta USD 75</span><span lang="en">beta USD 75</span></td></tr>
+    <tr><td><a href="https://aws.amazon.com/certification/certified-generative-ai-developer-professional/" rel="noopener">AWS Certified Generative AI Developer – Professional</a></td>
+      <td><span lang="zh-Hant">進階：建置生成式 AI 應用。官方建議 2 年以上的開發經驗，加上 1 年生成式 AI 實作經驗</span><span lang="en">Advanced: building generative AI applications. AWS recommends 2+ years building production apps plus 1 year of hands-on generative AI</span></td>
+      <td><span lang="zh-Hant">180 分鐘、75 題</span><span lang="en">180 min, 75 questions</span></td><td>USD 300</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="src"><span lang="zh-Hant">另外，AWS 的 Solutions Architect – Professional（SAP-C03）與 Developer – Associate（DVA-C03）新版本也加入了生成式 AI 與 AI 安全的內容，2026 年 11、12 月開始提供。</span><span lang="en">AWS's new Solutions Architect – Professional (SAP-C03) and Developer – Associate (DVA-C03) versions also add generative AI and AI security content, available from November and December 2026.</span> <a href="https://aws.amazon.com/blogs/training-and-certification/september-2026-new-offerings/" rel="noopener">AWS Training &amp; Certification blog, 2026-09</a></p>
+
+<h3>Google Cloud</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">證照</span><span lang="en">Certification</span></th><th><span lang="zh-Hant">適合</span><span lang="en">For</span></th><th><span lang="zh-Hant">考試</span><span lang="en">Exam</span></th><th><span lang="zh-Hant">費用</span><span lang="en">Fee</span></th></tr></thead>
+  <tbody>
+    <tr><td><a href="https://cloud.google.com/learn/certification/generative-ai-leader" rel="noopener">Generative AI Leader</a></td>
+      <td><span lang="zh-Hant">任何職務，不需技術背景；偏商業與決策</span><span lang="en">Any role, technical or not; business and decision focus</span></td>
+      <td><span lang="zh-Hant">90 分鐘、50–60 題；效期 3 年；英、日、西、葡文</span><span lang="en">90 min, 50–60 questions; valid 3 years; EN, JA, ES, PT</span></td><td>USD 99</td></tr>
+    <tr><td><a href="https://cloud.google.com/learn/certification/machine-learning-engineer" rel="noopener">Professional Machine Learning Engineer</a></td>
+      <td><span lang="zh-Hant">進階：官方建議 3 年以上業界經驗，其中 1 年以上在 Google Cloud；最新版本已改為以 Gemini Enterprise Agent Platform 為主</span><span lang="en">Advanced: 3+ years industry experience, 1+ on Google Cloud; latest version centres on the Gemini Enterprise Agent Platform</span></td>
+      <td><span lang="zh-Hant">2 小時、50–60 題；英、日文</span><span lang="en">2 hours, 50–60 questions; EN, JA</span></td><td>USD 200</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Microsoft Azure</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">證照</span><span lang="en">Certification</span></th><th><span lang="zh-Hant">適合</span><span lang="en">For</span></th><th><span lang="zh-Hant">考試</span><span lang="en">Exam</span></th><th><span lang="zh-Hant">費用</span><span lang="en">Fee</span></th></tr></thead>
+  <tbody>
+    <tr><td><a href="https://learn.microsoft.com/en-us/credentials/certifications/azure-ai-apps-and-agents-developer-associate/" rel="noopener">Azure AI Apps and Agents Developer Associate</a>（AI-103）</td>
+      <td><span lang="zh-Hant">中級：用 Python 與 Microsoft Foundry 建置生成式 AI 與 agent 應用；取代舊的 AI-102</span><span lang="en">Intermediate: generative AI and agent apps with Python and Microsoft Foundry; replaces the older AI-102</span></td>
+      <td><span lang="zh-Hant">120 分鐘；<strong>提供繁體中文</strong></span><span lang="en">120 min; <strong>available in Traditional Chinese</strong></span></td>
+      <td><span lang="zh-Hant">依考試地區而定</span><span lang="en">Varies by country</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Databricks</h3>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">證照</span><span lang="en">Certification</span></th><th><span lang="zh-Hant">適合</span><span lang="en">For</span></th><th><span lang="zh-Hant">考試</span><span lang="en">Exam</span></th><th><span lang="zh-Hant">費用</span><span lang="en">Fee</span></th></tr></thead>
+  <tbody>
+    <tr><td><a href="https://www.databricks.com/learn/certification/genai-engineer-associate" rel="noopener">Generative AI Engineer Associate</a></td>
+      <td><span lang="zh-Hant">在 Databricks 上建置 RAG 等生成式 AI 應用；官方建議 6 個月以上實作經驗。考試範圍包含「評測與監控」（12%）</span><span lang="en">Building RAG and other generative AI apps on Databricks; 6+ months hands-on recommended. Includes "Evaluation and Monitoring" (12%)</span></td>
+      <td><span lang="zh-Hant">90 分鐘、45 題計分；效期 2 年</span><span lang="en">90 min, 45 scored questions; valid 2 years</span></td><td>USD 200</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Anthropic（Claude）</h3>
+<p lang="zh-Hant">Anthropic 有四張 Claude 證照：Associate: Foundations、Developer: Foundations、Architect: Foundations、Architect: Professional，考試皆為監考形式。<strong>但目前只開放給「Claude Partner Network」成員組織的人員報考</strong>，個人無法直接報名。合作夥伴網路是給「組織」加入的，加入免費。考試時間與費用，官方部落格未列。</p>
+<p lang="en">Anthropic offers four Claude certifications: Associate: Foundations, Developer: Foundations, Architect: Foundations and Architect: Professional, all proctored. <strong>However, exams are currently available only to members of the Claude Partner Network</strong>, so individuals can't register on their own. The partner network is joined by organisations, and membership is free. Exam length and fees aren't listed on the official blog.</p>
+<p lang="zh-Hant">如果你的公司不是合作夥伴，可以先用 Anthropic Academy 的免費課程學習（課程完成證明不等於正式證照）。</p>
+<p lang="en">If your employer isn't a partner, Anthropic Academy's free courses are a good start (course completion certificates aren't the proctored credential).</p>
+<p class="src"><a href="https://claude.com/blog/four-role-based-claude-certifications" rel="noopener">Claude blog: Four role-based certifications (2026-07-23)</a> · <a href="https://academy.claude.com/help/faq" rel="noopener">Claude Academy FAQ</a></p>
+
+<h2 id="choose"><span lang="zh-Hant">怎麼選</span><span lang="en">How to choose</span></h2>
+<div class="table-wrap">
+<table class="plain">
+  <thead><tr><th><span lang="zh-Hant">你的情況</span><span lang="en">Your situation</span></th><th><span lang="zh-Hant">建議</span><span lang="en">Suggestion</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">目標客戶主要用某一家雲端</span><span lang="en">Target customers use one cloud</span></td>
+      <td><span lang="zh-Hant">考那一家的 AI 開發類證照（AWS Generative AI Developer、Azure AI-103、Google PMLE）</span><span lang="en">That vendor's AI developer certification (AWS Generative AI Developer, Azure AI-103, Google PMLE)</span></td></tr>
+    <tr><td><span lang="zh-Hant">還沒決定雲端，想先建立基礎</span><span lang="en">No cloud chosen yet, want foundations</span></td>
+      <td><span lang="zh-Hant">先讀完本課程中級篇、做一個作品；證照可以晚點再考。真的需要入門證照，AWS AI Practitioner 或 Google Generative AI Leader 範圍較廣、費用較低</span><span lang="en">Finish this course's intermediate track and build a project first; certify later. If you need an entry certificate, AWS AI Practitioner or Google Generative AI Leader are broad and cheaper</span></td></tr>
+    <tr><td><span lang="zh-Hant">希望用中文應考</span><span lang="en">Want to take the exam in Chinese</span></td>
+      <td><span lang="zh-Hant">Azure AI-103 有繁體中文版本</span><span lang="en">Azure AI-103 is offered in Traditional Chinese</span></td></tr>
+    <tr><td><span lang="zh-Hant">客戶資料平台是 Databricks</span><span lang="en">Customers' data platform is Databricks</span></td>
+      <td><span lang="zh-Hant">Databricks Generative AI Engineer Associate</span><span lang="en">Databricks Generative AI Engineer Associate</span></td></tr>
+    <tr><td><span lang="zh-Hant">在 Claude 合作夥伴公司工作</span><span lang="en">You work at a Claude partner</span></td>
+      <td><span lang="zh-Hant">Claude Developer 或 Architect 系列</span><span lang="en">Claude Developer or Architect track</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3><span lang="zh-Hant">證照範圍和本課程的對應</span><span lang="en">How certification topics map to this course</span></h3>
+<p lang="zh-Hant">各家 AI 開發類證照的共同主題，本課程大多有涵蓋。差別在於證照會考該家雲端的特定服務，那部分要另外讀官方教材。</p>
+<p lang="en">Most topics shared by the AI developer certifications are covered here. The difference is that exams test each vendor's specific services, which you'll need to study from official material.</p>
+<div class="table-wrap">
+<table class="plain">
+  <thead><tr><th><span lang="zh-Hant">常見考試主題</span><span lang="en">Common exam topic</span></th><th><span lang="zh-Hant">本課程章節</span><span lang="en">Course chapters</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">prompt 設計、結構化輸出</span><span lang="en">Prompt design, structured output</span></td><td><a href="b3-prompting.html">B3</a>、<a href="i2-structured-answers.html">I2</a>、<a href="04-structured-output.html">04</a></td></tr>
+    <tr><td><span lang="zh-Hant">RAG、資料準備、向量搜尋</span><span lang="en">RAG, data preparation, vector search</span></td><td><a href="b4-your-documents.html">B4</a>、<a href="i3-better-search.html">I3</a>、<a href="05-retrieval.html">05</a></td></tr>
+    <tr><td><span lang="zh-Hant">agent、工具呼叫</span><span lang="en">Agents, tool use</span></td><td><a href="i4-tools.html">I4</a>、<a href="06-agents.html">06</a></td></tr>
+    <tr><td><span lang="zh-Hant">評測與監控</span><span lang="en">Evaluation and monitoring</span></td><td><a href="i6-testing.html">I6</a>、<a href="07-evals.html">07</a>、<a href="08-production.html">08</a></td></tr>
+    <tr><td><span lang="zh-Hant">部署、安全、治理、成本</span><span lang="en">Deployment, security, governance, cost</span></td><td><a href="i5-memory-cost.html">I5</a>、<a href="i7-deploy.html">I7</a>、<a href="08-production.html">08</a></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="plan"><span lang="zh-Hant">12 週學習計畫</span><span lang="en">A 12-week study plan</span></h2>
+<p lang="zh-Hant">以每週 5 到 8 小時估算。已經有程式基礎的話，第 1 週可以很快帶過。重點是每個階段都有<strong>做出來的東西</strong>，不是只讀完。</p>
+<p lang="en">Assumes 5–8 hours a week. With programming experience, week 1 goes quickly. The point is that every phase ends with something <strong>built</strong>, not just read.</p>
+<div class="table-wrap">
+<table class="plan">
+  <thead><tr><th><span lang="zh-Hant">週</span><span lang="en">Weeks</span></th><th><span lang="zh-Hant">讀</span><span lang="en">Read</span></th><th><span lang="zh-Hant">做出來的東西</span><span lang="en">What you build</span></th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><span lang="zh-Hant">入門篇 B1–B5（有基礎可略讀）</span><span lang="en">Basics B1–B5 (skim if experienced)</span></td>
+      <td><span lang="zh-Hant">跑完 <code>labs/beginner</code> 的四個程式</span><span lang="en">Run the four <code>labs/beginner</code> scripts</span></td></tr>
+    <tr><td>2–3</td><td><span lang="zh-Hant">中級篇 I1–I4</span><span lang="en">Intermediate I1–I4</span></td>
+      <td><span lang="zh-Hant">完成各章練習；用 <code>--fake</code> 與（可選）<code>--ollama</code> 跑機器人</span><span lang="en">Chapter exercises; run the bot with <code>--fake</code> and optionally <code>--ollama</code></span></td></tr>
+    <tr><td>4</td><td><span lang="zh-Hant">中級篇 I5–I7</span><span lang="en">Intermediate I5–I7</span></td>
+      <td><span lang="zh-Hant">把機器人部署成網站，取得第一個公開網址</span><span lang="en">Deploy the bot as a website: your first public URL</span></td></tr>
+    <tr><td>5–6</td><td><a href="projects.html"><span lang="zh-Hant">作品集專案</span><span lang="en">Portfolio projects</span></a></td>
+      <td><span lang="zh-Hant">作品 1：換成自己的資料，寫 20 題評測，照 README 範本整理</span><span lang="en">Project 1: your own data, 20 eval questions, README per the template</span></td></tr>
+    <tr><td>7–9</td><td><span lang="zh-Hant">進階篇 01–07</span><span lang="en">Core 01–07</span></td>
+      <td><span lang="zh-Hant">作品 2（主力作品）：最好結合你的專業領域</span><span lang="en">Project 2 (your main piece): ideally drawing on your domain expertise</span></td></tr>
+    <tr><td>10</td><td><span lang="zh-Hant">進階篇 08–09</span><span lang="en">Core 08–09</span></td>
+      <td><span lang="zh-Hant">作品 2 加上監控、成本估算、模型比較（雲端 vs 本機）</span><span lang="en">Add monitoring, cost estimates and a cloud-vs-local model comparison to project 2</span></td></tr>
+    <tr><td>11–12</td><td><span lang="zh-Hant">（選擇性）證照官方教材與模擬考</span><span lang="en">(Optional) official certification material and practice exams</span></td>
+      <td><span lang="zh-Hant">報考一張與目標客戶相關的證照；或把時間拿來完善作品與撰寫技術文章</span><span lang="en">Sit one certification relevant to your target customers, or polish your projects and write a technical article instead</span></td></tr>
+  </tbody>
+</table>
+</div>
+<p lang="zh-Hant">12 週結束時，你會有：兩個附評測數字的作品（其中一個有公開網址）、一份讀完的課程，以及（如果選擇考）一張證照。這三樣放在一起，比任何單一項目都有說服力。</p>
+<p lang="en">After 12 weeks you'll have two projects with eval numbers (one with a public URL), a completed course, and optionally a certification. Together they're more convincing than any one alone.</p>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

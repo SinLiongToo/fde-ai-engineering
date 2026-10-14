@@ -2,6 +2,9 @@
 pydantic>=2.6
 pytest>=8
 rich>=13            # code_reviewer CLI 的終端輸出
+fastapi>=0.140      # 中級篇 I7 的網頁版機器人
+uvicorn>=0.50
+httpx>=0.27         # FastAPI 測試用的 TestClient
 
 # 選用 / optional
 # google-genai>=1.0   # code_reviewer 的 LLM 補充（需 GEMINI_API_KEY）

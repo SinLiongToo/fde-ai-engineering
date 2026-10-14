@@ -1,0 +1,5 @@
+# 部署網頁版機器人所需的套件（Dockerfile 使用）
+pydantic>=2.6
+fastapi>=0.140
+uvicorn>=0.50
+anthropic>=1.0,<2       # 只有 LLM_BACKEND=claude 時才會用到

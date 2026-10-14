@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="zh-Hant" data-lang="zh" data-page="i7-deploy"
+  data-title-zh="I7 部署上線：做成別人能用的網站 · AI 工程實戰課"
+  data-title-en="I7 Deploying: a website others can use · AI Engineering for FDEs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I7 部署上線：做成別人能用的網站 · AI 工程實戰課</title>
+<meta name="description" content="中級篇第 7 章：把員工手冊機器人做成網站。FastAPI、Docker、部署到 Google Cloud Run 或 Hugging Face Spaces，以及公開網址必須有的防護：限流、每日上限、金鑰管理。">
+<script src="assets/boot.js"></script>
+<link rel="stylesheet" href="assets/site.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="assets/site.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="btn ghost icon-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <a class="brand" href="index.html"><span class="brand-mark">FDE</span><span class="brand-name"><span lang="zh-Hant">AI 工程實戰課</span><span lang="en">AI Engineering for FDEs</span></span></a>
+  <span class="spacer"></span>
+  <button class="btn icon-btn" id="langBtn" type="button">EN</button>
+  <button class="btn icon-btn" id="themeBtn" type="button">☾</button>
+</header>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Chapters"></nav>
+<div class="main">
+<article class="content">
+
+<div class="eyebrow"><span lang="zh-Hant">中級篇 · 第 7 章</span><span lang="en">Intermediate · Chapter 7</span></div>
+<h1><span lang="zh-Hant">部署上線：做成別人能用的網站</span><span lang="en">Deploying: a website others can use</span></h1>
+<p class="lede" lang="zh-Hant">到目前為止，機器人只能在你的終端機裡跑。作品集裡如果有一個別人點開就能用的網址，說服力差很多。這一章把機器人做成網站、包成 Docker，部署到雲端，並加上公開網址一定要有的防護。</p>
+<p class="lede" lang="en">So far the bot only runs in your terminal. A portfolio piece with a link people can just open is far more convincing. This chapter turns the bot into a website, packages it with Docker, deploys it to the cloud, and adds the protections any public URL needs.</p>
+<div class="meta"><span>⏱ 30 <span lang="zh-Hant">分鐘</span><span lang="en">min</span></span><span>🧪 <code>web.py</code> · <code>Dockerfile</code></span></div>
+
+<section class="objectives">
+  <h2><span lang="zh-Hant">這章要加的功能</span><span lang="en">What this chapter adds</span></h2>
+  <ul lang="zh-Hant">
+    <li>用 FastAPI 把機器人包成網頁與 API。</li>
+    <li>公開網址的防護：每個 IP 的頻率限制、全站每日上限、輸入長度限制、金鑰不進程式。</li>
+    <li>用 Docker 打包，部署到 Google Cloud Run 或 Hugging Face Spaces。</li>
+  </ul>
+  <ul lang="en">
+    <li>Wrapping the bot as a web page and API with FastAPI.</li>
+    <li>Protections for a public URL: per-IP rate limits, a daily site-wide cap, input length limits, keys kept out of code.</li>
+    <li>Packaging with Docker and deploying to Google Cloud Run or Hugging Face Spaces.</li>
+  </ul>
+</section>
+
+<h2 id="architecture"><span lang="zh-Hant">架構</span><span lang="en">Architecture</span></h2>
+<div class="diagram" role="img" aria-label="Browser sends a question to FastAPI, which checks rate limits, then calls HandbookBot, which uses the selected LLM backend">
+  <svg viewBox="0 0 720 150" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="ah7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+    <rect class="box" x="10" y="45" width="110" height="56" rx="9"/><text x="65" y="78" text-anchor="middle"><tspan lang="zh-Hant">瀏覽器</tspan><tspan lang="en">Browser</tspan></text>
+    <rect class="box warn" x="160" y="45" width="140" height="56" rx="9"/>
+    <text x="230" y="70" text-anchor="middle" font-weight="700">FastAPI</text>
+    <text x="230" y="89" text-anchor="middle" class="muted"><tspan lang="zh-Hant">限流、輸入檢查</tspan><tspan lang="en">rate limit, validation</tspan></text>
+    <rect class="box accent" x="340" y="45" width="150" height="56" rx="9"/>
+    <text x="415" y="70" text-anchor="middle" font-weight="700">HandbookBot</text>
+    <text x="415" y="89" text-anchor="middle" class="muted"><tspan lang="zh-Hant">I1–I5 的機器人</tspan><tspan lang="en">the bot from I1–I5</tspan></text>
+    <rect class="box" x="530" y="20" width="180" height="32" rx="7"/><text x="620" y="41" text-anchor="middle"><tspan lang="zh-Hant">假模型（預設）</tspan><tspan lang="en">Fake (default)</tspan></text>
+    <rect class="box" x="530" y="60" width="180" height="32" rx="7"/><text x="620" y="81" text-anchor="middle">Claude API</text>
+    <rect class="box" x="530" y="100" width="180" height="32" rx="7"/><text x="620" y="121" text-anchor="middle">Ollama</text>
+    <path class="edge" d="M120 73 L158 73" marker-end="url(#ah7)"/>
+    <path class="edge" d="M300 73 L338 73" marker-end="url(#ah7)"/>
+    <path class="edge" d="M490 66 L528 38" marker-end="url(#ah7)"/>
+    <path class="edge" d="M490 73 L528 76" marker-end="url(#ah7)"/>
+    <path class="edge" d="M490 80 L528 114" marker-end="url(#ah7)"/>
+  </svg>
+</div>
+<p lang="zh-Hant">網站只是在機器人前面加了一層。<code>bot.py</code> 完全沒改，這又是 I1 把零件分開的好處。用哪個模型由環境變數 <code>LLM_BACKEND</code> 決定。</p>
+<p lang="en">The website is just a layer in front of the bot; <code>bot.py</code> is untouched, another payoff from separating parts in I1. The environment variable <code>LLM_BACKEND</code> picks the model.</p>
+
+<h2 id="local"><span lang="zh-Hant">先在本機跑起來</span><span lang="en">Run it locally first</span></h2>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash">pip install -r requirements.txt
+uvicorn labs.intermediate.web:app --reload       # 打開 http://127.0.0.1:8000</code></pre>
+</figure>
+<p lang="zh-Hant">網頁本身是一個 HTML 檔（<code>labs/intermediate/static/index.html</code>），用 JavaScript 呼叫 <code>POST /api/ask</code>。API 的核心只有幾行：</p>
+<p lang="en">The page itself is one HTML file (<code>labs/intermediate/static/index.html</code>) that calls <code>POST /api/ask</code> from JavaScript. The core of the API is a few lines:</p>
+<figure class="code"><figcaption><span>labs/intermediate/web.py</span></figcaption>
+<pre><code class="language-python">class AskRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=300)     # 輸入長度限制
+    session_id: str | None = Field(default=None, max_length=64)
+
+
+@app.post("/api/ask")
+def ask(req: AskRequest, request: Request):
+    blocked = limiter.check(client_ip(request))              # 先限流，再呼叫模型
+    if blocked:
+        raise HTTPException(status_code=429, detail=blocked)
+    sid, bot = get_bot(req.session_id)                      # 每個訪客一段自己的對話
+    turn = bot.ask(req.question.strip())
+    return {"session_id": sid, "answer": ..., "citations": ..., "tool_calls": ..., "error": turn.error}</code></pre>
+</figure>
+
+<h2 id="safety"><span lang="zh-Hant">公開網址一定要有的防護</span><span lang="en">Protections every public URL needs</span></h2>
+<p lang="zh-Hant">在自己電腦上跑和放到網路上，最大的差別是：<strong>任何人都能呼叫它</strong>。如果背後接的是付費的 API，有人寫個迴圈一直呼叫，帳單就會失控。</p>
+<p lang="en">The big difference between running locally and going public is that <strong>anyone can call it</strong>. If a paid API sits behind it, someone looping requests can run up the bill.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th><span lang="zh-Hant">防護</span><span lang="en">Protection</span></th><th><span lang="zh-Hant">這個專案的做法</span><span lang="en">How this project does it</span></th></tr></thead>
+  <tbody>
+    <tr><td><span lang="zh-Hant">預設不花錢</span><span lang="en">Free by default</span></td>
+      <td><span lang="zh-Hant"><code>LLM_BACKEND</code> 預設是 <code>fake</code>。要用 Claude 必須明確設定，而且一定要搭配下面的上限。</span><span lang="en"><code>LLM_BACKEND</code> defaults to <code>fake</code>. Claude must be enabled explicitly, and always with the limits below.</span></td></tr>
+    <tr><td><span lang="zh-Hant">每個 IP 的頻率限制</span><span lang="en">Per-IP rate limit</span></td>
+      <td><span lang="zh-Hant">預設每分鐘 10 次（<code>RATE_LIMIT_PER_MINUTE</code>），超過回傳 HTTP 429。</span><span lang="en">10 per minute by default (<code>RATE_LIMIT_PER_MINUTE</code>); beyond that, HTTP 429.</span></td></tr>
+    <tr><td><span lang="zh-Hant">全站每日上限</span><span lang="en">Daily site-wide cap</span></td>
+      <td><span lang="zh-Hant">預設每天 200 次（<code>DAILY_LIMIT</code>）。這是「最壞情況的帳單上限」：200 次乘上每次的成本（I5）。</span><span lang="en">200 per day by default (<code>DAILY_LIMIT</code>). This is your worst-case bill: 200 × cost per request (I5).</span></td></tr>
+    <tr><td><span lang="zh-Hant">輸入長度</span><span lang="en">Input length</span></td>
+      <td><span lang="zh-Hant">問題最多 300 字，避免有人貼超長文字灌爆 token。</span><span lang="en">Questions capped at 300 characters, so no one can flood tokens with huge pastes.</span></td></tr>
+    <tr><td><span lang="zh-Hant">金鑰不進程式</span><span lang="en">Keys stay out of code</span></td>
+      <td><span lang="zh-Hant"><code>ANTHROPIC_API_KEY</code> 只從環境變數讀取，在部署平台設定成 secret。不寫進程式、不寫進 Dockerfile、不推上 GitHub。</span><span lang="en"><code>ANTHROPIC_API_KEY</code> is read only from the environment and set as a platform secret. Never in code, the Dockerfile or GitHub.</span></td></tr>
+    <tr><td><span lang="zh-Hant">不收真實資料</span><span lang="en">No real data</span></td>
+      <td><span lang="zh-Hant">頁面明確告知「手冊是虛構的、請勿輸入個資」。示範版沒有登入，所有訪客都是示範員工 E001。</span><span lang="en">The page says the handbook is fictional and asks for no personal data. There's no login; every visitor is demo employee E001.</span></td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout warn">
+  <span class="label"><span lang="zh-Hant">這是示範等級的防護</span><span lang="en">Demo-grade protection</span></span>
+  <p lang="zh-Hant">限流資料存在記憶體裡，只適用於單一執行個體；平台開了多個執行個體，每個都會各自計算。<code>X-Forwarded-For</code> 也可能被偽造。正式系統要用共用的儲存（例如 Redis）、真正的登入，並在 API 供應商的後台設定花費上限。另外別忘了：真正上線時，<code>user_id</code> 必須來自登入系統（I4）。</p>
+  <p lang="en">Rate-limit state lives in memory, so it only works for a single instance; with several instances each counts separately. <code>X-Forwarded-For</code> can be spoofed. Production needs shared storage (such as Redis), real authentication, and a spending limit set in your API provider's console. And remember: in production, <code>user_id</code> must come from a login system (I4).</p>
+</div>
+
+<h2 id="docker"><span lang="zh-Hant">用 Docker 打包</span><span lang="en">Packaging with Docker</span></h2>
+<p lang="zh-Hant">Docker 把程式、Python 版本和套件包成一個「映像檔」，在你的電腦和雲端跑起來會一模一樣。專案根目錄的 <code>Dockerfile</code>：</p>
+<p lang="en">Docker packages the code, Python version and libraries into an image that runs identically on your machine and in the cloud. The <code>Dockerfile</code> at the repo root:</p>
+<figure class="code"><figcaption><span>Dockerfile</span></figcaption>
+<pre><code>FROM python:3.12-slim
+
+# 以非 root 使用者執行（Hugging Face Spaces 要求 uid 1000；對其他平台也比較安全）
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    LLM_BACKEND=fake \
+    PORT=7860
+WORKDIR $HOME/app
+
+COPY --chown=user requirements-web.txt .
+RUN pip install --no-cache-dir -r requirements-web.txt
+
+# 只複製網頁版需要的程式，不包含測試與其他 lab
+COPY --chown=user labs/__init__.py labs/__init__.py
+COPY --chown=user labs/intermediate labs/intermediate
+
+EXPOSE 7860
+# Cloud Run 會用環境變數 PORT 指定連接埠（覆寫上面的 7860）
+CMD ["sh", "-c", "uvicorn labs.intermediate.web:app --host 0.0.0.0 --port ${PORT}"]</code></pre>
+</figure>
+<figure class="code"><figcaption><span><span lang="zh-Hant">本機測試映像檔（需要安裝 Docker Desktop）</span><span lang="en">Test the image locally (needs Docker Desktop)</span></span></figcaption>
+<pre><code class="language-bash">docker build -t handbook-bot .
+docker run -p 7860:7860 handbook-bot              # 打開 http://localhost:7860</code></pre>
+</figure>
+
+<h2 id="deploy"><span lang="zh-Hant">部署到雲端</span><span lang="en">Deploying to the cloud</span></h2>
+<p lang="zh-Hant">兩個常見的選擇。兩者都可以直接用上面的 Dockerfile。費用與免費額度會變動，部署前請查看各平台的官方說明。</p>
+<p lang="en">Two common choices, both using the Dockerfile above. Pricing and free allowances change, so check each platform's official documentation before deploying.</p>
+
+<h3>A. Hugging Face Spaces（<span lang="zh-Hant">最簡單</span><span lang="en">simplest</span>）</h3>
+<ol lang="zh-Hant">
+  <li>在 Hugging Face 建立新的 Space，SDK 選 <strong>Docker</strong>。</li>
+  <li>Space 的 <code>README.md</code> 開頭要有這段設定（<code>app_port</code> 對應 Dockerfile 的 7860）。</li>
+  <li>把 <code>Dockerfile</code>、<code>requirements-web.txt</code>、<code>labs/</code> 推到 Space 的 git repo。</li>
+  <li>要用 Claude 的話，在 Space 的 Settings 新增 secret <code>ANTHROPIC_API_KEY</code>，並新增變數 <code>LLM_BACKEND=claude</code>。</li>
+</ol>
+<ol lang="en">
+  <li>Create a new Space on Hugging Face and choose the <strong>Docker</strong> SDK.</li>
+  <li>The Space's <code>README.md</code> needs this front matter (<code>app_port</code> matches the Dockerfile's 7860).</li>
+  <li>Push <code>Dockerfile</code>, <code>requirements-web.txt</code> and <code>labs/</code> to the Space's git repo.</li>
+  <li>To use Claude, add a secret <code>ANTHROPIC_API_KEY</code> and a variable <code>LLM_BACKEND=claude</code> in the Space settings.</li>
+</ol>
+<figure class="code"><figcaption><span>README.md（Space）</span></figcaption>
+<pre><code class="language-yaml">---
+title: Handbook Bot
+emoji: 📘
+colorFrom: green
+colorTo: gray
+sdk: docker
+app_port: 7860
+---</code></pre>
+</figure>
+
+<h3>B. Google Cloud Run</h3>
+<p lang="zh-Hant">需要 Google Cloud 帳號與 <code>gcloud</code> 指令列工具。在專案根目錄執行，Cloud Run 會用 Dockerfile 建置並部署：</p>
+<p lang="en">Needs a Google Cloud account and the <code>gcloud</code> CLI. Run from the repo root; Cloud Run builds from the Dockerfile and deploys:</p>
+<figure class="code"><figcaption><span>terminal</span></figcaption>
+<pre><code class="language-bash">gcloud run deploy handbook-bot --source . --region asia-east1 --allow-unauthenticated
+
+# 改用 Claude：金鑰先存進 Secret Manager，再掛到服務上
+gcloud run services update handbook-bot --region asia-east1 \
+    --set-env-vars LLM_BACKEND=claude,DAILY_LIMIT=100 \
+    --set-secrets ANTHROPIC_API_KEY=anthropic-api-key:latest</code></pre>
+</figure>
+<p lang="zh-Hant"><code>asia-east1</code> 是台灣的機房區域。<code>--allow-unauthenticated</code> 讓任何人都能開啟網址，所以前面的防護一定要先做好。</p>
+<p lang="en"><code>asia-east1</code> is the Taiwan region. <code>--allow-unauthenticated</code> lets anyone open the URL, which is why the protections above come first.</p>
+
+<div class="callout note">
+  <span class="label"><span lang="zh-Hant">那 GitHub Pages、Cloudflare Pages 呢？</span><span lang="en">What about GitHub Pages or Cloudflare Pages?</span></span>
+  <p lang="zh-Hant">它們只能放靜態檔案（HTML、CSS、JS），不能執行 Python。這門課的網站就放在 GitHub Pages，但機器人需要伺服器跑 Python，所以要用上面兩種平台。也可以把網頁放在 GitHub Pages、API 放在 Cloud Run，但就要另外處理跨網域（CORS）設定。</p>
+  <p lang="en">They host static files (HTML, CSS, JS) only and can't run Python. This course's site lives on GitHub Pages, but the bot needs a Python server, hence the two platforms above. You could put the page on GitHub Pages and the API on Cloud Run, but then you must handle cross-origin (CORS) settings.</p>
+</div>
+
+<h2 id="tests"><span lang="zh-Hant">網站也要測試</span><span lang="en">Test the website too</span></h2>
+<p lang="zh-Hant"><code>tests/test_web.py</code> 用 FastAPI 的 TestClient 測試，不需要真的啟動伺服器。最重要的是測「防護有沒有生效」：</p>
+<p lang="en"><code>tests/test_web.py</code> uses FastAPI's TestClient, so no real server is needed. Above all, test that the protections work:</p>
+<figure class="code"><figcaption><span>labs/intermediate/tests/test_web.py</span></figcaption>
+<pre><code class="language-python">def test_rate_limit_per_minute(client):           # client 設定為每分鐘 5 次
+    codes = [client.post("/api/ask", json={"question": "事假幾天？"}).status_code for _ in range(6)]
+    assert codes[:5] == [200] * 5 and codes[5] == 429
+
+
+@pytest.mark.parametrize("payload", [{"question": ""}, {"question": "x" * 301}, {}])
+def test_input_validation(client, payload):
+    assert client.post("/api/ask", json=payload).status_code == 422
+
+
+def test_claude_backend_requires_key(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    with pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY"):
+        make_llm("claude")</code></pre>
+</figure>
+
+<h2 id="practice"><span lang="zh-Hant">練習</span><span lang="en">Exercises</span></h2>
+<ol lang="zh-Hant">
+  <li>在本機用 <code>uvicorn</code> 跑起來，連續送出 11 個問題，看看第 11 個會出現什麼。</li>
+  <li>把機器人部署到 Hugging Face Spaces（使用預設的假模型，不花錢），把網址放進你的作品集 README。</li>
+  <li>加一個 <code>/api/stats</code>，回傳今天已經用了幾次、還剩幾次。想一想：這個資訊應該公開給所有人看嗎？</li>
+</ol>
+<ol lang="en">
+  <li>Run it locally with <code>uvicorn</code>, send 11 questions in a row, and see what happens on the 11th.</li>
+  <li>Deploy to Hugging Face Spaces (with the default fake model, at no cost) and add the URL to your portfolio README.</li>
+  <li>Add <code>/api/stats</code> returning today's used and remaining requests. Should that be public to everyone?</li>
+</ol>
+
+<h2 id="quiz"><span lang="zh-Hant">小測驗</span><span lang="en">Quiz</span></h2>
+<div class="quiz" data-quiz>
+  <fieldset data-answer="b">
+    <legend><span lang="zh-Hant">1. 公開網址的機器人接上付費 API，最重要的一道防護是？</span><span lang="en">1. A public bot is wired to a paid API. The most important protection?</span></legend>
+    <label><input type="radio" name="q1" value="a"><span><span lang="zh-Hant">把 API key 藏在 JavaScript 裡，讓瀏覽器直接呼叫 API。</span><span lang="en">Hide the API key in JavaScript and let the browser call the API directly.</span></span></label>
+    <label><input type="radio" name="q1" value="b"><span><span lang="zh-Hant">在伺服器端設定頻率限制與每日上限，並在供應商後台設定花費上限。</span><span lang="en">Server-side rate limits and a daily cap, plus a spending limit in the provider's console.</span></span></label>
+    <label><input type="radio" name="q1" value="c"><span><span lang="zh-Hant">在頁面上寫「請勿濫用」。</span><span lang="en">Write "please don't abuse this" on the page.</span></span></label>
+    <div class="explain" lang="zh-Hant">放在瀏覽器的金鑰任何人都看得到。防護一定要在伺服器端，並且有最壞情況的上限。</div>
+    <div class="explain" lang="en">A key in the browser is visible to everyone. Protection must live server-side, with a worst-case ceiling.</div>
+  </fieldset>
+  <fieldset data-answer="c">
+    <legend><span lang="zh-Hant">2. 為什麼不能把機器人直接放在 GitHub Pages？</span><span lang="en">2. Why can't the bot go straight onto GitHub Pages?</span></legend>
+    <label><input type="radio" name="q2" value="a"><span><span lang="zh-Hant">GitHub 不允許放 AI 相關的程式。</span><span lang="en">GitHub doesn't allow AI code.</span></span></label>
+    <label><input type="radio" name="q2" value="b"><span><span lang="zh-Hant">GitHub Pages 太慢。</span><span lang="en">GitHub Pages is too slow.</span></span></label>
+    <label><input type="radio" name="q2" value="c"><span><span lang="zh-Hant">GitHub Pages 只能放靜態檔案，不能執行 Python 伺服器。</span><span lang="en">GitHub Pages serves static files only and can't run a Python server.</span></span></label>
+    <div class="explain" lang="zh-Hant">搜尋、呼叫模型、執行工具都需要伺服器端程式，所以要用 Cloud Run、Hugging Face Spaces 這類能跑容器的平台。</div>
+    <div class="explain" lang="en">Search, model calls and tools need server-side code, so you need a platform that runs containers, such as Cloud Run or Hugging Face Spaces.</div>
+  </fieldset>
+</div>
+
+</article>
+<aside class="toc" id="toc" aria-label="On this page"></aside>
+</div>
+</div>
+</body>
+</html>

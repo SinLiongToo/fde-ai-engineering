@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>員工手冊助理（示範）</title>
+<style>
+  :root { --bg: #faf9f6; --card: #fff; --fg: #1d1f23; --muted: #5c606a; --border: #e3e0d8; --accent: #0f6e6a; --accent-fg: #fff; --soft: #e2f1ef; --bad: #b3261e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14161a; --card: #1b1e23; --fg: #e6e7ea; --muted: #a5a9b2; --border: #2a2e35; --accent: #4fc1b8; --accent-fg: #0d1f1d; --soft: #15302d; --bad: #f28b82; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.7 -apple-system, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 40px; }
+  h1 { font-size: 1.5rem; margin: 0 0 .2rem; }
+  .sub { color: var(--muted); font-size: .92rem; margin: 0 0 1rem; }
+  .note { border: 1px solid var(--border); background: var(--card); border-radius: 10px; padding: .7rem 1rem; font-size: .88rem; color: var(--muted); }
+  #log { margin: 1rem 0; display: grid; gap: .7rem; }
+  .msg { border-radius: 12px; padding: .7rem 1rem; max-width: 92%; white-space: pre-wrap; }
+  .me { justify-self: end; background: var(--accent); color: var(--accent-fg); }
+  .bot { justify-self: start; background: var(--card); border: 1px solid var(--border); }
+  .meta { font-size: .8rem; color: var(--muted); margin-top: .3rem; }
+  .err { color: var(--bad); }
+  form { display: flex; gap: .5rem; position: sticky; bottom: 0; background: var(--bg); padding: .6rem 0; }
+  input { flex: 1; font: inherit; padding: .65rem .8rem; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--fg); min-width: 0; }
+  button { font: inherit; border: 0; border-radius: 10px; padding: .6rem 1rem; background: var(--accent); color: var(--accent-fg); cursor: pointer; }
+  button:disabled { opacity: .5; cursor: wait; }
+  .chips { display: flex; flex-wrap: wrap; gap: .4rem; margin: .8rem 0 0; }
+  .chip { background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: 99px; padding: .3rem .7rem; font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>星河軟體 員工手冊助理</h1>
+  <p class="sub">AI 工程實戰課 · 中級篇示範專案 · <span id="backend">…</span></p>
+  <div class="note">這是教學示範。手冊內容是虛構的；所有訪客都以示範員工 E001 的身分查詢。請勿輸入任何個人或機密資料。</div>
+  <div class="chips" id="chips">
+    <button class="chip" type="button">請特休要提前幾天申請？</button>
+    <button class="chip" type="button">筆電壞了可以自己拿去修嗎？</button>
+    <button class="chip" type="button">我今年還剩幾天特休？</button>
+    <button class="chip" type="button">公司有員工停車位嗎？</button>
+  </div>
+  <div id="log" aria-live="polite"></div>
+  <form id="f">
+    <input id="q" maxlength="300" placeholder="問一個關於公司規定的問題…" autocomplete="off" aria-label="問題">
+    <button id="send" type="submit">送出</button>
+  </form>
+</main>
+<script>
+(function () {
+  var log = document.getElementById("log"), q = document.getElementById("q"), send = document.getElementById("send");
+  var sid = null;
+  try { sid = sessionStorage.getItem("handbook-sid"); } catch (e) {}
+  function add(cls, text, meta) {
+    var d = document.createElement("div");
+    d.className = "msg " + cls;
+    d.textContent = text;
+    if (meta) { var m = document.createElement("div"); m.className = "meta"; m.textContent = meta; d.appendChild(m); }
+    log.appendChild(d);
+    d.scrollIntoView({ block: "end" });
+  }
+  fetch("healthz").then(function (r) { return r.json(); }).then(function (h) {
+    var names = { fake: "離線假模型（規則式）", claude: "Claude", ollama: "本機開源模型" };
+    document.getElementById("backend").textContent = "模型：" + (names[h.backend] || h.backend);
+  }).catch(function () {});
+  function ask(text) {
+    if (!text) return;
+    add("me", text);
+    send.disabled = true;
+    fetch("api/ask", { method: "POST", headers: { "Content-Type": "application/json" },
+                       body: JSON.stringify({ question: text, session_id: sid }) })
+      .then(function (r) { return r.json().then(function (body) { return { status: r.status, body: body }; }); })
+      .then(function (res) {
+        if (res.status !== 200) {
+          var detail = typeof res.body.detail === "string" ? res.body.detail : "問題格式不正確（最多 300 字）。";
+          add("bot err", detail); return;
+        }
+        var b = res.body;
+        sid = b.session_id;
+        try { sessionStorage.setItem("handbook-sid", sid); } catch (e) {}
+        if (b.error) { add("bot err", "（" + b.error + "）"); return; }
+        var meta = [];
+        if (b.citations.length) meta.push("出處：" + b.citations.join("、"));
+        b.tool_calls.forEach(function (c) { meta.push("使用工具 " + c.name + " → " + c.result); });
+        add("bot", b.answer, meta.join("\n"));
+      })
+      .catch(function () { add("bot err", "連線失敗，請稍後再試。"); })
+      .finally(function () { send.disabled = false; q.focus(); });
+  }
+  document.getElementById("f").addEventListener("submit", function (e) {
+    e.preventDefault(); var t = q.value.trim(); q.value = ""; ask(t);
+  });
+  document.getElementById("chips").addEventListener("click", function (e) {
+    if (e.target.classList.contains("chip")) ask(e.target.textContent);
+  });
+})();
+</script>
+</body>
+</html>

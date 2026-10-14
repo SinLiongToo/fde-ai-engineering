@@ -16,6 +16,7 @@
     { slug: "i4-tools", part: "intermediate", num: "I4", zh: "工具呼叫：查個人資料", en: "Tool calls: personal data", min: 25 },
     { slug: "i5-memory-cost", part: "intermediate", num: "I5", zh: "對話記憶與成本", en: "Conversation memory and cost", min: 20 },
     { slug: "i6-testing", part: "intermediate", num: "I6", zh: "自動測試整個機器人", en: "Testing the whole bot", min: 20 },
+    { slug: "i7-deploy", part: "intermediate", num: "I7", zh: "部署上線：做成網站", en: "Deploying as a website", min: 30 },
     { slug: "01-fde-role", part: "core", num: "01", zh: "FDE 是做什麼的", en: "What FDEs actually do", min: 15 },
     { slug: "02-engagement", part: "core", num: "02", zh: "從需求到上線的交付流程", en: "The engagement lifecycle", min: 20 },
     { slug: "03-ai-assisted-dev", part: "core", num: "03", zh: "與 Coding Agent 協作", en: "Working with coding agents", min: 25 },
@@ -146,6 +147,8 @@
     });
     html += '<ol style="margin-top:.8rem"><li><a href="projects.html"' + (page === "projects" ? ' aria-current="page"' : "") +
       '><span class="num">★</span><span>' + both("作品集專案", "Portfolio projects") + "</span><span></span></a></li>" +
+      '<li><a href="certifications.html"' + (page === "certifications" ? ' aria-current="page"' : "") +
+      '><span class="num">✓</span><span>' + both("認證與學習路線", "Certifications & path") + "</span><span></span></a></li>" +
       '<li><a href="glossary.html"' + (page === "glossary" ? ' aria-current="page"' : "") +
       '><span class="num">Aa</span><span>' + both("詞彙表", "Glossary") + "</span><span></span></a></li></ol>";
     var pct = Math.round(doneCount / CHAPTERS.length * 100);
